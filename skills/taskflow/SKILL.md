@@ -3,7 +3,15 @@ name: taskflow
 description: Generates and maintains GitHub-backed task flows. Use when the user wants to bootstrap a repository and GitHub Project, create a Project and issues for an existing repository, audit an existing Project or backlog, deduplicate issues, or turn project requirements into implementation-ready GitHub work.
 license: MIT
 metadata:
-  version: "3.2.0"
+  version: "3.3.0"
+allowed-tools:
+  - Read
+  - Grep
+  - Glob
+  - Bash(gh *)
+  - Bash(git *)
+  - Bash(python *)
+  - Bash(python3 *)
 ---
 
 # TaskFlow
@@ -12,18 +20,42 @@ Create an ordered, non-redundant task flow and the GitHub structure needed to ru
 
 ## Non-negotiable rules
 
-1. **No writes without approval.** First produce a numbered `GITHUB CHANGE PLAN`. Then ask a **Continue / Refuse** chooser (native multiple-choice when available). Do not ask the user to type free-form approval text. Writes include repository creation or push, issue/comment edits, labels, milestones, assignments, Project creation/configuration, item moves, closures, and duplicate marking.
-2. **Unknown is not absent.** Authentication, authorization, SSO, network, rate-limit, and target-resolution failures must never be interpreted as proof that a repository or Project does not exist.
-3. **Evidence before questions.** Inspect the repository, tracking state, and code first. Ask unresolved questions in one batch.
-4. **One issue, one independently verifiable outcome.** Use checklist items for implementation steps that do not need separate ownership or delivery.
-5. **Reuse existing conventions.** Do not invent labels, milestones, Project fields, status options, or assignments without approval.
-6. **Open PRs are in-flight, not done.** Keep the canonical issue open until completion satisfies the Definition of Done. Do not create a redundant issue solely to mirror a PR.
-7. **Native relationships are mandatory when supported.** Body text like “Blocked by #12” is not enough. Set GitHub Relationships (`blocked by` / `blocks`, and parent/sub-issue when it is a true hierarchy). Verify the sidebar is non-empty after writes.
-8. **Project fields and labels are real writes.** If the plan states Size, Estimate, Priority, Status, or Labels, set them on the Project item and/or repository issue. Planning prose in the issue body does not populate the Project sidebar.
-9. **Stop safely on failure.** Record completed operation identities, emit a partial verification report, and create a residual plan. Never rerun the whole plan blindly.
-10. **Verify after writes.** Re-read GitHub state and report actual URLs, numbers, relationships, fields, labels, and mismatches.
+1. **No GitHub content writes without plan approval.** First produce a numbered `GITHUB CHANGE PLAN`. Then ask a **Continue / Refuse** chooser (native multiple-choice when available). Do not ask the user to type free-form approval text. Content writes include repository creation or push, issue/comment edits, labels, milestones, assignments, Project creation/configuration, item moves, closures, and duplicate marking.
+2. **Ask tool permission once per TaskFlow run — not on every `gh` call.** At session start (before evidence gathering), ask a single Continue / Refuse chooser for GitHub CLI / git / shell access. After **Continue**, do not re-ask for the same class of read/inspect commands mid-run. Plan Continue / Refuse still gates mutations.
+3. **Unknown is not absent.** Authentication, authorization, SSO, network, rate-limit, and target-resolution failures must never be interpreted as proof that a repository or Project does not exist.
+4. **Evidence first, questions second.** Inspect the repository, tracking state, and code first. Ask unresolved questions in one batch.
+5. **One issue, one independently verifiable outcome.** Use checklist items for implementation steps that do not need separate ownership or delivery.
+6. **Reuse existing conventions.** Do not invent labels, milestones, Project fields, status options, or assignments without approval.
+7. **Open PRs are in-flight, not done.** Keep the canonical issue open until completion satisfies the Definition of Done. Do not create a redundant issue solely to mirror a PR.
+8. **Native relationships are mandatory when supported.** Body text like “Blocked by #12” is not enough. Set GitHub Relationships (`blocked by` / `blocks`, and parent/sub-issue when it is a true hierarchy). Verify the sidebar is non-empty after writes.
+9. **Project fields and labels are real writes.** If the plan states Size, Estimate, Priority, Status, or Labels, set them on the Project item and/or repository issue. Planning prose in the issue body does not populate the Project sidebar.
+10. **Stop safely on failure.** Record completed operation identities, emit a partial verification report, and create a residual plan. Never rerun the whole plan blindly.
+11. **Verify after writes.** Re-read GitHub state and report actual URLs, numbers, relationships, fields, labels, and mismatches.
 
 For command-level GitHub and Projects V2 handling, read [github-operations.md](github-operations.md) before any GitHub inspection or write.
+
+## 0. Session tooling permission (ask once)
+
+Hosts like Claude Code / Cursor may prompt on every shell/`gh` call. TaskFlow must not add to that noise.
+
+**At the very start of a TaskFlow run**, before listing issues or touching GitHub, ask one chooser:
+
+> TaskFlow needs GitHub CLI (`gh`), git, and light shell/python to inspect and (later) update your repo/Project.
+> 1. **Continue** — allow these tools for this TaskFlow run
+> 2. **Refuse** — stop; no tool access
+
+Then:
+
+| Choice | Behavior |
+|--------|----------|
+| Continue | Proceed with evidence gathering. Do **not** re-ask for the same tool class on each `gh issue list`, `gh project …`, etc. |
+| Refuse | Stop TaskFlow; explain what cannot run |
+
+Still keep the later **plan** Continue / Refuse before any GitHub **mutations**.
+
+If the host keeps showing its own system permission dialogs, that is outside the skill — point the user at README allowlist settings. While waiting, batch commands so one host approval covers the next burst when possible.
+
+`allowed-tools` in this skill’s frontmatter pre-approves `gh` / `git` / read tools on agents that honor it (for example Claude Code on the skill-invoke turn). For whole-session quiet mode, the user should add matching allow rules in their agent settings.
 
 ## 1. Resolve the target and preflight
 

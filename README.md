@@ -63,7 +63,39 @@ taskflow/
 
 - GitHub CLI (`gh`) authenticated to the target host
 - permission to inspect/create repositories, issues, and Projects as needed
-- user confirmation before any GitHub write
+- Continue / Refuse on the change plan before any GitHub content write
+
+## Fewer permission prompts
+
+TaskFlow is designed to ask **once** at the start for tool access, then **once** on the change plan. It should not ask you in chat to re-approve every `gh` call.
+
+Hosts may still show their own system permission dialogs. To quiet those:
+
+### Claude Code
+
+Add allow rules in `.claude/settings.json` or `~/.claude/settings.json`:
+
+```json
+{
+  "permissions": {
+    "allow": [
+      "Bash(gh *)",
+      "Bash(git *)",
+      "Bash(python *)",
+      "Bash(python3 *)",
+      "Read",
+      "Grep",
+      "Glob"
+    ]
+  }
+}
+```
+
+This skill also declares `allowed-tools` for `gh` / `git` / read helpers on agents that honor skill frontmatter (skill-invoke turn).
+
+### Cursor
+
+Use auto-run / terminal allow settings so approved `gh` and git commands are not re-prompted every time. Plan Continue / Refuse still gates GitHub mutations.
 
 ## What this is not
 
