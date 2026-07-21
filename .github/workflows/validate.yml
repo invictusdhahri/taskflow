@@ -1,0 +1,33 @@
+name: Validate Skill
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check required files exist
+        run: |
+          test -f skills/taskflow/SKILL.md
+          test -f skills/taskflow/github-operations.md
+          test -f skills/taskflow/templates.md
+          test -f skills/taskflow/examples.md
+          test -f LICENSE
+          test -f README.md
+
+      - name: Check SKILL.md frontmatter
+        run: |
+          head -n 1 skills/taskflow/SKILL.md | grep -qx '^---$'
+          grep -q '^name:' skills/taskflow/SKILL.md
+          grep -q '^description:' skills/taskflow/SKILL.md
+          grep -q 'version:' skills/taskflow/SKILL.md
+
+      - name: Check markdown links are not empty
+        run: |
+          ! grep -rn '\]()' skills/taskflow/*.md README.md

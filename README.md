@@ -1,6 +1,21 @@
-# TaskFlow
+<div align="center">
 
-Publishable Agent Skill for generating and maintaining GitHub-backed task flows.
+<img src="./assets/logo.png" alt="TaskFlow" width="600" />
+
+<br/>
+
+[![Validate](https://github.com/invictusdhahri/taskflow/actions/workflows/validate.yml/badge.svg)](https://github.com/invictusdhahri/taskflow/actions/workflows/validate.yml)
+[![License: MIT](https://img.shields.io/github/license/invictusdhahri/taskflow?color=8b5cf6)](./LICENSE)
+[![Open issues](https://img.shields.io/github/issues/invictusdhahri/taskflow?color=22d3ee)](https://github.com/invictusdhahri/taskflow/issues)
+[![Open PRs](https://img.shields.io/github/issues-pr/invictusdhahri/taskflow?color=22d3ee)](https://github.com/invictusdhahri/taskflow/pulls)
+[![Agent Skill](https://img.shields.io/badge/agent%20skill-compatible-8b5cf6)](https://agentskills.io)
+[![Duplicate issues](https://img.shields.io/badge/duplicate%20issues-0-22d3ee)](#)
+
+</div>
+
+TaskFlow is a **100% independent, GitHub-native task-flow agent skill** that doesn't sacrifice on quality.
+
+It generates implementation-ready GitHub issues and Projects, asks before it writes, and never leaves work unassigned or duplicated.
 
 TaskFlow helps an AI coding agent:
 
@@ -51,6 +66,11 @@ npx skills add .
 taskflow/
 ├── LICENSE
 ├── README.md
+├── assets/
+│   └── logo.png              # README header image
+├── .github/
+│   └── workflows/
+│       └── validate.yml      # CI: checks required files + SKILL.md frontmatter
 └── skills/
     └── taskflow/
         ├── SKILL.md                 # required entrypoint
