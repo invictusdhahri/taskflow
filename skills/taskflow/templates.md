@@ -116,7 +116,7 @@ Move an issue to `Ready` only when all boxes pass:
 - [ ] **NFR / docs / rollout** are filled or `N/A — reason`
 - [ ] No open product/architecture decision blocks coding
 - [ ] Size fits in ~2 weeks, or the issue is split
-- [ ] Assignee is named or explicitly `Unassigned`
+- [ ] Assignee is a real GitHub login (or `@me`); Unassigned only if user chose board-pickup with 2+ coders
 
 If Ready fails → keep in Backlog and `UPDATE`, split, or open a discovery issue.
 
@@ -252,12 +252,12 @@ Use for features, integrations, migrations, and most bugs with non-trivial verif
 - Priority: Critical / High / Medium / Low — because ...
 - Size: S (1–2d) / M (3–5d) / L (1–2w)
 - Estimate (proposal): ...
-- Assignee: Unassigned / @user
+- Assignee: @login or `@me` (required when 1 coder; Unassigned only if user chose board-pickup)
 - Labels: ...
 - Milestone: ...
 - Related: #… · PR #… · docs…
 
-> **Required writes:** set Project **Size**, **Estimate**, **Priority**, and **Status** via `gh project item-edit`, and repo **Labels** via `gh issue edit --add-label`. Planning bullets alone leave the Project sidebar on “Choose an option”.
+> **Required writes:** set Project **Size**, **Estimate**, **Priority**, and **Status** via `gh project item-edit`; repo **Labels** via `gh issue edit --add-label`; and **Assignee** via `gh issue edit --add-assignee` (use `@me` for the solo coder). Planning bullets alone leave the sidebar empty.
 ```
 
 ---
@@ -309,7 +309,7 @@ Use when the change is small, risk is low, and Ready still holds.
 ## Planning
 - Priority: ... — because ...
 - Size: S
-- Assignee: Unassigned / @user
+- Assignee: @login or `@me` (required when 1 coder; Unassigned only if user chose board-pickup)
 - Related: ...
 ```
 
@@ -522,7 +522,7 @@ The web and mobile clients are blocked on a shared auth contract before any user
 - Priority: High — because it unblocks all authenticated features
 - Size: M (3–5d)
 - Estimate (proposal): 3–4 days
-- Assignee: Unassigned
+- Assignee: @me
 - Labels: feature, backend, security
 - Milestone: MVP
 - Related: #12 · #18
@@ -542,6 +542,8 @@ Target
 - Repository: OWNER/REPO (EXISTS | ABSENT | UNKNOWN)
 - Mode: 1 | 2 | 3
 - Project: OWNER/#N | CREATE under OWNER | none
+- Coding team: N coder(s) — logins: @me | user1, user2
+- Assignment mode: assign-all-to-solo | by-skill | lead | board-pickup
 - Audit boundary:
 - Evidence: complete | sampled — exclusions: ...
 
@@ -557,7 +559,8 @@ Operations (in order)
 - OP-02 CREATE_PROJECT ... [depends on: OP-01]
 - OP-02b CREATE_VIEW Board (layout=board, Status columns) [required]
 - OP-02c CREATE_VIEW Table/Roadmap ... [optional — only if user approved]
-- OP-03 CREATE_ISSUE T1 "<title>" [depends on ...]
+- OP-03 CREATE_ISSUE T1 "<title>" assignee=@me [depends on ...]
+- OP-03b ASSIGN #… @me / login   [if create did not set assignee]
 - OP-04 UPDATE_ISSUE #... — reason: ...
 - OP-05 DEDUPLICATE #... → #... — reason: ...
 - OP-06 CLOSE_ISSUE #... — resolution/evidence: ...

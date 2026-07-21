@@ -3,7 +3,7 @@ name: taskflow
 description: Generates and maintains GitHub-backed task flows. Use when the user wants to bootstrap a repository and GitHub Project, create a Project and issues for an existing repository, audit an existing Project or backlog, deduplicate issues, or turn project requirements into implementation-ready GitHub work.
 license: MIT
 metadata:
-  version: "3.3.0"
+  version: "3.4.0"
 allowed-tools:
   - Read
   - Grep
@@ -75,8 +75,36 @@ Before an executable plan, check:
 - repository owner, visibility, default branch, fork/parent, archived state, Issues enabled, and viewer permission
 - Project owner, access, visibility, linked repositories, fields, workflows, and applicable views
 - for new Projects: Board view is in the plan by default; ask whether Table/Roadmap are also wanted
-- whether proposed assignees are assignable
+- **coding team roster** (required — see §1b)
+- whether proposed assignees are assignable on the target repo
 - whether the evidence set is complete or sampled
+
+## 1b. Coding team roster (required)
+
+Always learn who will code before generating or assigning work. This is mandatory in **Mode 1**, and still required in Modes 2–3 unless a roster was already confirmed earlier in the same run.
+
+Ask with a chooser when possible:
+
+> How many people will write code on this project?
+> 1. Just me (1 coder)
+> 2. 2 coders
+> 3. 3+ coders
+> 4. Not sure yet
+
+Then collect:
+
+| If | Ask / do |
+|----|----------|
+| **1 coder** | Confirm their GitHub login (default `@me` / the authenticated `gh` user). **Assign every created/updated actionable issue to them** unless they explicitly refuse assignment. |
+| **2+ coders** | Ask for each person’s GitHub login + focus (frontend/backend/full-stack/etc.). Ask assignment mode: (1) assign by skill match (2) assign all to a lead (3) leave unassigned for board pickup. |
+| **Not sure** | Default to **1 coder = current `gh` user** and say so; assign to `@me` unless they correct you. |
+
+Rules:
+
+- Do **not** default the whole backlog to Unassigned when there is a known solo coder.
+- “Suggested assignee” in the issue body is not enough — use `gh issue edit N --add-assignee LOGIN` (or `@me`) on create/update.
+- Verify assignability before the plan; if someone cannot be assigned, say why and ask for an alternate login.
+- Non-coding stakeholders (PM, design-only) are optional; do not count them as coders unless they will open PRs.
 
 ## 2. Detect the mode
 
@@ -91,6 +119,7 @@ Deliverable after approval:
 - a Project under the confirmed user or organization owner with a **Board view as the default** (Status columns). Ask whether to also add Table and/or Roadmap views; Board is required.
 - minimal approved metadata (Status at minimum; Priority/Size/Estimate when useful)
 - an MVP-sized set of implementation-ready issues added to the Project
+- coding team roster confirmed; assignees set on issues (solo coder → assign that person)
 
 TaskFlow does not scaffold application code unless the user separately requests it.
 
@@ -103,8 +132,7 @@ Deliverable after approval:
 - triage/import of existing issues
 - gap issues derived from code and user priorities
 - Project membership and field values
-
-Do not create another repository. Existing issues increase reconciliation depth; they do not change the mode.
+- coding team roster confirmed; new/updated issues assigned per §1b
 
 ### Mode 3 — Existing Project Audit
 
@@ -159,6 +187,7 @@ Each task must:
 - state scope and out-of-scope
 - record applicable non-functional requirements
 - include dependencies, risks, documentation, and rollout implications when relevant
+- include a real **Assignee** (GitHub login or `@me`) — Unassigned only when the user chose board-pickup with 2+ coders
 - be independently verifiable and normally fit within two weeks
 
 Use provisional IDs (`T1`, `T2`) before GitHub numbers exist. Produce:

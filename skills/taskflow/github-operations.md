@@ -230,7 +230,22 @@ gh label list --repo OWNER/REPO --limit 100
 gh issue edit N --repo OWNER/REPO --add-label enhancement,web
 ```
 
-Reuse existing labels. Create new labels only when approved in the change plan. Include label/field operations explicitly (for example `OP-XX SET_SIZE #18=M`, `OP-XX SET_ESTIMATE #18=4`, `OP-XX ADD_LABELS #18 enhancement,web`).
+**Assignees are real writes.** Body “Assignee: …” does not assign anyone.
+
+```bash
+# Solo coder (most common for new projects)
+gh issue edit N --repo OWNER/REPO --add-assignee "@me"
+
+# Named teammate (must be assignable on the repo)
+gh issue edit N --repo OWNER/REPO --add-assignee their-login
+
+# On create
+gh issue create --repo OWNER/REPO --assignee "@me" --title "..." --body-file ...
+```
+
+Verify with `gh issue view N --json assignees`. If assignment fails, report it in VERIFY and ask for a valid login — do not silently leave the issue unassigned when the plan named an owner.
+
+Reuse existing labels. Create new labels only when approved in the change plan. Include label/field/assignee operations explicitly (for example `OP-XX SET_SIZE #18=M`, `OP-XX ADD_LABELS #18 enhancement,web`, `OP-XX ASSIGN #18 @me`).
 
 Project linking does not automatically add existing issues. Auto-add workflows may not backfill existing matching items.
 

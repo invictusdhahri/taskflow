@@ -55,9 +55,9 @@ OP-01 CREATE_REPOSITORY acme/threads private
 OP-02 CREATE_PROJECT acme/"Threads MVP" (depends on OP-01)
 OP-02b CREATE_VIEW "Board" layout=board (required; Status columns)
 OP-02c ASK/SKIP Table + Roadmap unless user wants extras
-OP-03 CREATE_ISSUE T1 "Establish repository and CI baseline"
-OP-04 CREATE_ISSUE T3 "Define user persistence schema"
-OP-05 CREATE_ISSUE T4 "Implement email/password authentication API"
+OP-03 CREATE_ISSUE T1 "Establish repository and CI baseline" assignee=@me
+OP-04 CREATE_ISSUE T3 "Define user persistence schema" assignee=@me
+OP-05 CREATE_ISSUE T4 "Implement email/password authentication API" assignee=@me
 OP-06 RELATE T4 blocked-by T3
 OP-07 ADD_PROJECT_ITEMS T1,T3,T4 status=Ready
 
@@ -190,4 +190,17 @@ Assistant presents Plan v1, then asks:
 - User types “ok” / “sure” → re-ask the same Continue / Refuse chooser
 - User says “make the repo public” → treat as revise intent; issue Plan v2; ask Continue / Refuse again for Plan v2
 
-Never instruct: “Type Approve Plan v1.”
+## Example 9 — Solo coder must be asked and assigned
+
+Mode 1 or empty backlog. Agent asks:
+
+> How many people will write code on this project?
+> 1. Just me (1 coder)
+> 2. 2 coders
+> 3. 3+ coders
+
+User picks **Just me**. Agent confirms `@me` (or their login).
+
+Correct create plan: every new issue includes `assignee=@me` and VERIFY shows assignees populated.
+
+Incorrect: leaving issues Unassigned “for the board” when there is only one coder.
