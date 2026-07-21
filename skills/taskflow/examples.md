@@ -61,10 +61,10 @@ OP-05 CREATE_ISSUE T4 "Implement email/password authentication API"
 OP-06 RELATE T4 blocked-by T3
 OP-07 ADD_PROJECT_ITEMS T1,T3,T4 status=Ready
 
-Approval requested: Approve Plan v1 fully or name selected operations.
+Approval requested: chooser — (1) Continue execute Plan v1  (2) Refuse no writes
 ```
 
-After approval, record every identity and verify repository visibility, Project owner/linkage, issue bodies, dependencies, membership, and Status.
+After the plan, ask that Continue / Refuse question with the host’s multiple-choice UI when available. Do not ask the user to type “Approve Plan v1”.
 
 ## Example 3 — Mode 2 with an existing issue backlog
 
@@ -177,15 +177,17 @@ Action: `KEEP/UPDATE`, record blocker owner, next action, and review date. Do no
 
 An issue with no activity, no owner, no milestone, no linked code, superseded requirements, and no response after the agreed status window may be proposed as `CLOSE AS OBSOLETE` with evidence.
 
-## Example 8 — Approval revision invalidates the old plan
+## Example 8 — Approval is a chooser, not typed text
 
-Assistant presents Plan v1. User says: “Looks good, but make the repository public.”
+Assistant presents Plan v1, then asks:
 
-Correct behavior:
+> Plan v1 is ready. What do you want to do?
+> 1. Continue — execute Plan v1 as written
+> 2. Refuse — no GitHub writes
 
-1. do not execute Plan v1
-2. issue Plan v2 with `visibility=public`
-3. call out the changed visibility and implications
-4. wait for explicit approval of Plan v2
+- User picks **Continue** → execute Plan v1
+- User picks **Refuse** → no writes; offer Revise only if they want changes
+- User types “ok” / “sure” → re-ask the same Continue / Refuse chooser
+- User says “make the repo public” → treat as revise intent; issue Plan v2; ask Continue / Refuse again for Plan v2
 
-“Looks good” does not approve a plan that the same message revises.
+Never instruct: “Type Approve Plan v1.”

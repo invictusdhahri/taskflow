@@ -574,10 +574,14 @@ Verify after execution
 - Expected repos / projects / issues / relationships / field values: ...
 
 Approval
-- Reply with: "Approve Plan vN" | "Approve Plan vN ops OP-01,OP-03" | revision notes
+- Ask a chooser (do not request typed approval text):
+  1. Continue — execute Plan vN as written
+  2. Refuse — no GitHub writes
 ```
 
 Do not mark blocked operations as executable. Explain the remediation first.
+
+**Anti-pattern:** ending with “Reply with Approve Plan vN”. **Required:** end with the Continue / Refuse question.
 
 ---
 

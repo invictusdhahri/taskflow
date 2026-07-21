@@ -3,7 +3,7 @@ name: taskflow
 description: Generates and maintains GitHub-backed task flows. Use when the user wants to bootstrap a repository and GitHub Project, create a Project and issues for an existing repository, audit an existing Project or backlog, deduplicate issues, or turn project requirements into implementation-ready GitHub work.
 license: MIT
 metadata:
-  version: "3.1.0"
+  version: "3.2.0"
 ---
 
 # TaskFlow
@@ -12,7 +12,7 @@ Create an ordered, non-redundant task flow and the GitHub structure needed to ru
 
 ## Non-negotiable rules
 
-1. **No writes without approval.** First produce a numbered `GITHUB CHANGE PLAN`. Wait for approval that clearly refers to the latest plan. Writes include repository creation or push, issue/comment edits, labels, milestones, assignments, Project creation/configuration, item moves, closures, and duplicate marking.
+1. **No writes without approval.** First produce a numbered `GITHUB CHANGE PLAN`. Then ask a **Continue / Refuse** chooser (native multiple-choice when available). Do not ask the user to type free-form approval text. Writes include repository creation or push, issue/comment edits, labels, milestones, assignments, Project creation/configuration, item moves, closures, and duplicate marking.
 2. **Unknown is not absent.** Authentication, authorization, SSO, network, rate-limit, and target-resolution failures must never be interpreted as proof that a repository or Project does not exist.
 3. **Evidence before questions.** Inspect the repository, tracking state, and code first. Ask unresolved questions in one batch.
 4. **One issue, one independently verifiable outcome.** Use checklist items for implementation steps that do not need separate ownership or delivery.
@@ -170,13 +170,34 @@ Stale candidates require evidence: configurable inactivity window, owner/milesto
 
 Use the exact plan format in [templates.md](templates.md). Number every plan (`Plan v1`, `Plan v2`).
 
-Approval rules:
+### Approval UX (required — do not ask for free-typed approval text)
 
-- Full approval: execute only the latest plan
-- Partial approval: execute only named operations
-- Revision: issue a new plan version; prior approval becomes invalid
-- Ambiguous acknowledgement (`ok`, `sure`, `thanks`): ask whether to execute the named plan
-- Destructive operations (mass close, Project deletion, rebuild): require explicit approval naming the operation
+After showing the plan, **stop and ask a chooser question**. Do **not** tell the user to type sentences like `Approve Plan v1` or `looks good, create them`.
+
+Prefer the host’s native multiple-choice / AskQuestion UI when available (Claude Code, Cursor, etc.). If no chooser exists, still present **numbered options** and ask them to pick a number.
+
+**Default gate (always use this first):**
+
+> Plan vN is ready. What do you want to do?
+> 1. **Continue** — execute Plan vN exactly as written (GitHub writes allowed)
+> 2. **Refuse** — do not write anything; keep this as proposal-only
+
+Meaning:
+
+| Choice | Action |
+|--------|--------|
+| Continue | Execute the latest plan fully |
+| Refuse | No writes. Stay idle until they ask for a revision or a new plan |
+
+**Only if they ask for more control**, or after Refuse when they want changes, offer a follow-up chooser:
+
+> 1. **Revise** — I will update the plan (no writes yet)
+> 2. **Partial** — I will ask which OP-## lines to run
+> 3. **Cancel** — stop
+
+Never treat `ok` / `sure` / `thanks` as Continue. If they reply with ambiguous chat text instead of picking an option, re-ask the Continue / Refuse chooser.
+
+Destructive plans (mass close, Project delete, rebuild) use the same Continue / Refuse chooser, but the question label must name the destructive action clearly (for example “Continue — close 12 issues and rebuild the board”).
 
 Rename issue consolidation as `DEDUPLICATE`, never `MERGE`, to avoid confusion with PR merging. PR merge is out of scope unless separately requested.
 
