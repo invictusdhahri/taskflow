@@ -554,7 +554,9 @@ Preflight
 
 Operations (in order)
 - OP-01 CREATE_REPOSITORY ... [precondition]
-- OP-02 CREATE_PROJECT ... [depends on OP-01]
+- OP-02 CREATE_PROJECT ... [depends on: OP-01]
+- OP-02b CREATE_VIEW Board (layout=board, Status columns) [required]
+- OP-02c CREATE_VIEW Table/Roadmap ... [optional — only if user approved]
 - OP-03 CREATE_ISSUE T1 "<title>" [depends on ...]
 - OP-04 UPDATE_ISSUE #... — reason: ...
 - OP-05 DEDUPLICATE #... → #... — reason: ...

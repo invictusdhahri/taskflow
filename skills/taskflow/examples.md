@@ -53,6 +53,8 @@ Target: github.com/acme/threads (ABSENT), Mode 1
 
 OP-01 CREATE_REPOSITORY acme/threads private
 OP-02 CREATE_PROJECT acme/"Threads MVP" (depends on OP-01)
+OP-02b CREATE_VIEW "Board" layout=board (required; Status columns)
+OP-02c ASK/SKIP Table + Roadmap unless user wants extras
 OP-03 CREATE_ISSUE T1 "Establish repository and CI baseline"
 OP-04 CREATE_ISSUE T3 "Define user persistence schema"
 OP-05 CREATE_ISSUE T4 "Implement email/password authentication API"

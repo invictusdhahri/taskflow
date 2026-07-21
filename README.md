@@ -11,6 +11,8 @@ TaskFlow helps an AI coding agent:
 
 It follows the open [Agent Skills](https://agentskills.io) standard and works with Cursor, Claude Code, Codex, and other compatible agents.
 
+New Projects default to a **Board** view (Status columns). Table and Roadmap are optional extras the agent can ask about.
+
 ## Install
 
 ```bash

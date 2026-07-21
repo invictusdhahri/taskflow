@@ -133,16 +133,69 @@ Use Projects V2 terminology:
 - **View** — table, board, or roadmap presentation
 - **Workflow** — automation that may add items, set fields, archive items, or close issues
 
-A board “column” is normally a displayed value of a field such as `Status`; it is not a classic Project column.
+A board “column” is a displayed value of a field such as `Status` (for example Backlog / Ready / In progress / In review / Done). It is not a classic Project column object.
 
-`gh project create` creates a Project but does not necessarily configure the desired view or workflows. Before execution:
+### Default view policy (TaskFlow)
+
+When creating a Project in Mode 1 or Mode 2:
+
+1. **Board is required and default.** Every new Project plan must include a Board view grouped/laid out by **Status**.
+2. **Ask about extras.** After confirming Board, ask once whether to also add:
+   - Table (spreadsheet-style triage)
+   - Roadmap (timeline)
+3. Do not ship a Project that only has an unnamed default table with no Board unless the API cannot create views — then say so in VERIFY and give a one-step UI fallback (“New view → Board → Group by Status”).
+
+Default Status options to reuse or create when missing:
+
+- `Backlog`
+- `Ready`
+- `In progress`
+- `In review`
+- `Done`
+
+(If the Project already has a close variant such as `In Progress`, reuse it — do not invent duplicates.)
+
+`gh project create` creates a Project but does not configure Board for you. After create:
 
 1. decide owner and visibility
-2. create or select the Project
+2. create the Project
 3. link the repository explicitly if approved
-4. inspect built-in fields before creating custom fields
-5. configure fields/options
-6. identify whether view/workflow configuration is supported by current CLI/API or requires a manual UI step
+4. inspect built-in fields (especially Status) before creating custom fields
+5. create/configure Priority, Size, Estimate when approved
+6. **create the Board view** (required), then optional Table/Roadmap if approved
+7. verify views exist before claiming Project setup is complete
+
+### Creating views via REST
+
+Prefer the Projects views REST API (GraphQL still lacks reliable view create mutations):
+
+```bash
+# Org-owned project
+gh api \
+  -X POST \
+  -H "Accept: application/vnd.github+json" \
+  "/orgs/ORG/projectsV2/PROJECT_NUMBER/views" \
+  -f name='Board' \
+  -f layout='board'
+
+# User-owned project (numeric user id from `gh api user --jq .id`)
+USER_ID=$(gh api user --jq .id)
+gh api \
+  -X POST \
+  -H "Accept: application/vnd.github+json" \
+  "/users/${USER_ID}/projectsV2/PROJECT_NUMBER/views" \
+  -f name='Board' \
+  -f layout='board'
+```
+
+Optional extras (only if the user approved them):
+
+```bash
+-f name='Table' -f layout='table'
+-f name='Roadmap' -f layout='roadmap'
+```
+
+After create, open the Project URL and confirm the Board is present and Status columns appear. If the API creates the Board but grouping is wrong, report that limitation and provide the UI step: set the Board to group by **Status**.
 
 Never claim an unsupported UI configuration succeeded.
 
@@ -303,14 +356,15 @@ After approval:
 2. create/verify repository if approved
 3. create/select Project under the approved owner
 4. link repository to Project if approved
-5. inspect/create only approved missing fields and options
-6. create approved repository-scoped labels/milestones
-7. create parent/foundation/blocker issues in topological order
-8. create native relationships and replace provisional IDs
-9. add issues to Project and capture item IDs
-10. set Project fields in separate operations
-11. perform approved issue updates, duplicate closures, and other state changes
-12. verify every operation and report mismatches
+5. inspect/create only approved missing fields and options (Status required for Board columns)
+6. **create Board view (required)**; create Table/Roadmap only if approved
+7. create approved repository-scoped labels/milestones
+8. create parent/foundation/blocker issues in topological order
+9. create native relationships and replace provisional IDs
+10. add issues to Project and capture item IDs
+11. set Project fields in separate operations
+12. perform approved issue updates, duplicate closures, and other state changes
+13. verify every operation — including that a Board view exists — and report mismatches
 
 ## Operation ledger and recovery
 
@@ -340,6 +394,7 @@ Verify actual state, not only command success:
 
 - repository host/owner/name, visibility, archived state, Issues capability, default branch, remote
 - Project owner/number/visibility/access, linked repositories, fields/options/views/workflows
+- **Board view present** (required for newly created Projects); note optional Table/Roadmap if any
 - issue number/title/body marker, labels, milestone, assignees, state reason
 - parent/sub-issue/dependency relationships
 - Project item identity and every approved field value

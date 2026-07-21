@@ -3,7 +3,7 @@ name: taskflow
 description: Generates and maintains GitHub-backed task flows. Use when the user wants to bootstrap a repository and GitHub Project, create a Project and issues for an existing repository, audit an existing Project or backlog, deduplicate issues, or turn project requirements into implementation-ready GitHub work.
 license: MIT
 metadata:
-  version: "3.0.0"
+  version: "3.1.0"
 ---
 
 # TaskFlow
@@ -42,6 +42,7 @@ Before an executable plan, check:
 - authentication, host, scopes, SSO, and rate limits
 - repository owner, visibility, default branch, fork/parent, archived state, Issues enabled, and viewer permission
 - Project owner, access, visibility, linked repositories, fields, workflows, and applicable views
+- for new Projects: Board view is in the plan by default; ask whether Table/Roadmap are also wanted
 - whether proposed assignees are assignable
 - whether the evidence set is complete or sampled
 
@@ -55,8 +56,8 @@ Use only when a new GitHub repository is explicitly required and its target is c
 
 Deliverable after approval:
 - repository creation and optional initial push
-- a Project under the confirmed user or organization owner
-- minimal approved metadata
+- a Project under the confirmed user or organization owner with a **Board view as the default** (Status columns). Ask whether to also add Table and/or Roadmap views; Board is required.
+- minimal approved metadata (Status at minimum; Priority/Size/Estimate when useful)
 - an MVP-sized set of implementation-ready issues added to the Project
 
 TaskFlow does not scaffold application code unless the user separately requests it.
@@ -66,7 +67,7 @@ TaskFlow does not scaffold application code unless the user separately requests 
 Use when the repository exists but no applicable active Project exists, regardless of issue count.
 
 Deliverable after approval:
-- a new or intentionally selected Project
+- a new or intentionally selected Project with a **Board view as the default** (Status columns). Ask about optional Table/Roadmap; Board is required.
 - triage/import of existing issues
 - gap issues derived from code and user priorities
 - Project membership and field values
