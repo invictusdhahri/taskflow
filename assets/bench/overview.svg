@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="320" viewBox="0 0 760 320" role="img" aria-label="TaskFlow runner performance overview">
+  <rect width="760" height="320" fill="#0f1419"/>
+  <text x="40" y="42" fill="#e7ecf1" font-family="ui-sans-serif, system-ui, sans-serif" font-size="20" font-weight="700">Runner performance</text>
+  <text x="40" y="66" fill="#8b98a5" font-family="ui-sans-serif, system-ui, sans-serif" font-size="13">Offline bench · synthetic fixtures + anonymized real-repo holdout · propose-only</text>
+
+  <rect x="40" y="100" width="210" height="180" rx="12" fill="#16202a" stroke="#38444d"/>
+  <text x="145" y="140" text-anchor="middle" fill="#8b98a5" font-family="ui-sans-serif, system-ui, sans-serif" font-size="13">Avg plan quality</text>
+  <text x="145" y="200" text-anchor="middle" fill="#22d3ee" font-family="ui-sans-serif, system-ui, sans-serif" font-size="48" font-weight="700">78</text>
+  <text x="145" y="230" text-anchor="middle" fill="#8b98a5" font-family="ui-sans-serif, system-ui, sans-serif" font-size="12">score / 100 on valid plans</text>
+  <text x="145" y="255" text-anchor="middle" fill="#8b98a5" font-family="ui-sans-serif, system-ui, sans-serif" font-size="12">smoke · matrix · holdout</text>
+
+  <rect x="275" y="100" width="210" height="180" rx="12" fill="#16202a" stroke="#38444d"/>
+  <text x="380" y="140" text-anchor="middle" fill="#8b98a5" font-family="ui-sans-serif, system-ui, sans-serif" font-size="13">Real-repo holdout</text>
+  <text x="380" y="200" text-anchor="middle" fill="#22d3ee" font-family="ui-sans-serif, system-ui, sans-serif" font-size="48" font-weight="700">80</text>
+  <text x="380" y="230" text-anchor="middle" fill="#8b98a5" font-family="ui-sans-serif, system-ui, sans-serif" font-size="12">avg score when plan parses</text>
+  <text x="380" y="255" text-anchor="middle" fill="#8b98a5" font-family="ui-sans-serif, system-ui, sans-serif" font-size="12">codebase in prompt</text>
+
+  <rect x="510" y="100" width="210" height="180" rx="12" fill="#16202a" stroke="#38444d"/>
+  <text x="615" y="140" text-anchor="middle" fill="#8b98a5" font-family="ui-sans-serif, system-ui, sans-serif" font-size="13">Cost per plan</text>
+  <text x="615" y="200" text-anchor="middle" fill="#22d3ee" font-family="ui-sans-serif, system-ui, sans-serif" font-size="40" font-weight="700">~$0.02</text>
+  <text x="615" y="230" text-anchor="middle" fill="#8b98a5" font-family="ui-sans-serif, system-ui, sans-serif" font-size="12">typical real-repo run</text>
+  <text x="615" y="255" text-anchor="middle" fill="#8b98a5" font-family="ui-sans-serif, system-ui, sans-serif" font-size="12">via OpenRouter</text>
+</svg>
