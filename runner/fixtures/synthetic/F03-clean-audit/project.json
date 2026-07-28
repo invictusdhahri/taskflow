@@ -1,0 +1,15 @@
+{
+  "title": "Billing board",
+  "number": 1,
+  "url": "https://github.com/users/acme/projects/1",
+  "fields": {
+    "Status": ["Backlog", "Ready", "In Progress", "Validation", "Done"]
+  },
+  "items": [
+    { "issue_number": 10, "status": "Ready", "priority": "High", "size": "M" },
+    { "issue_number": 11, "status": "In Progress", "priority": "Critical", "size": "S" },
+    { "issue_number": 12, "status": "Ready", "priority": "Medium", "size": "S" },
+    { "issue_number": 13, "status": "Backlog", "priority": "High", "size": "S" },
+    { "issue_number": 14, "status": "Done", "priority": "Low", "size": "S" }
+  ]
+}

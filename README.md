@@ -60,6 +60,22 @@ npx skills add .
 - Listing comes from install telemetry when people run `npx skills add invictusdhahri/taskflow`
 - Cursor can also import via **Customize → Rules → Add Rule → Remote Rule (GitHub)** using this repo URL
 
+## Runner
+
+The interactive skill stays under `skills/taskflow/`. The [`runner/`](./runner/) package snapshots a GitHub repo (issues + codebase), calls the default planner via OpenRouter, and writes a **propose-only** change plan — no GitHub writes.
+
+```bash
+cd runner && cp .env.example .env && pnpm install   # set OPENROUTER_API_KEY
+pnpm plan -- --repo OWNER/REPO
+# → results/plans/<id>.json
+```
+
+Bench overview (smoke → matrix → holdout; fixtures anonymized):
+
+![Runner performance overview](./assets/bench/overview.svg)
+
+Optional re-bench: `pnpm bench` in [`runner/`](./runner/).
+
 ## Repo layout
 
 ```text
@@ -67,16 +83,18 @@ taskflow/
 ├── LICENSE
 ├── README.md
 ├── assets/
-│   └── logo.png              # README header image
+│   ├── logo.png
+│   └── bench/                # runner performance chart
 ├── .github/
 │   └── workflows/
-│       └── validate.yml      # CI: checks required files + SKILL.md frontmatter
+│       └── validate.yml
+├── runner/                   # plan + snapshot + optional bench
 └── skills/
     └── taskflow/
-        ├── SKILL.md                 # required entrypoint
-        ├── github-operations.md     # Projects V2 / gh CLI reference
-        ├── templates.md             # Caveman, files, Ready/Done, issue templates
-        └── examples.md              # mode and recovery examples
+        ├── SKILL.md
+        ├── github-operations.md
+        ├── templates.md
+        └── examples.md
 ```
 
 ## Requirements

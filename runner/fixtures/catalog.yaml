@@ -1,0 +1,31 @@
+fixtures:
+  - id: F01-fresh-bootstrap
+    path: synthetic/F01-fresh-bootstrap
+    kind: synthetic
+    mode: 1
+    band: L
+    role: scored-matrix
+  - id: F02-repo-no-project
+    path: synthetic/F02-repo-no-project
+    kind: synthetic
+    mode: 2
+    band: M
+    role: scored-matrix
+  - id: F03-clean-audit
+    path: synthetic/F03-clean-audit
+    kind: synthetic
+    mode: 3
+    band: L
+    role: scored-matrix
+  - id: F04-messy-duplicates
+    path: synthetic/F04-messy-duplicates
+    kind: synthetic
+    mode: 3
+    band: H
+    role: smoke-and-matrix
+
+# Real snapshots (created via pnpm snapshot) — holdout only
+# - id: R01-...
+#   path: snapshots/R01-...
+#   kind: snapshot
+#   role: holdout

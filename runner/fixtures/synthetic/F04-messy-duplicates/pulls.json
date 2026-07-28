@@ -1,0 +1,18 @@
+[
+  {
+    "number": 31,
+    "title": "JWT login WIP",
+    "state": "open",
+    "body": "Working on #22 (also overlaps #20 #21)",
+    "linked_issues": [22],
+    "updated_at": "2026-07-01T10:00:00Z"
+  },
+  {
+    "number": 32,
+    "title": "Dashboard spike",
+    "state": "open",
+    "body": "Related to #23 #24",
+    "linked_issues": [24],
+    "updated_at": "2026-07-02T10:00:00Z"
+  }
+]

@@ -1,0 +1,5 @@
+# Placeholder — real snapshots are created with:
+
+#   npm run snapshot -- --repo OWNER/REPO --id R01-sparse
+
+# This directory is gitignored. Do not commit private issue bodies.

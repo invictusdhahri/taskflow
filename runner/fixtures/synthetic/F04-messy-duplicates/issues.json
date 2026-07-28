@@ -1,0 +1,112 @@
+[
+  {
+    "number": 20,
+    "title": "Add login",
+    "body": "need auth",
+    "state": "open",
+    "labels": [],
+    "assignees": [],
+    "updated_at": "2026-01-10T10:00:00Z",
+    "project_status": "In Progress"
+  },
+  {
+    "number": 21,
+    "title": "Implement user login with JWT",
+    "body": "Same as auth basically — JWT login for API",
+    "state": "open",
+    "labels": ["backend"],
+    "assignees": [],
+    "updated_at": "2026-02-10T10:00:00Z",
+    "project_status": "Backlog"
+  },
+  {
+    "number": 22,
+    "title": "JWT authentication for API routes",
+    "body": "## Caveman\n- **Problem:** API open.\n- **Do this:** JWT login + middleware.\n- **Done when:** protected routes reject bad tokens.\n\n## Files to change\n| Path | Why | Confidence |\n| src/auth/login.ts | login | likely |\n| src/auth/middleware.ts | guard | likely |\n\n## Acceptance criteria\n- [ ] POST /auth/login returns token\n- [ ] bad token → 401",
+    "state": "open",
+    "labels": ["backend"],
+    "assignees": ["alice"],
+    "updated_at": "2026-03-10T10:00:00Z",
+    "project_status": "Ready"
+  },
+  {
+    "number": 23,
+    "title": "Build dashboard UI",
+    "body": "make dashboard",
+    "state": "open",
+    "labels": ["frontend"],
+    "assignees": [],
+    "updated_at": "2026-01-15T10:00:00Z",
+    "project_status": "Done"
+  },
+  {
+    "number": 24,
+    "title": "Dashboard page for customers",
+    "body": "show stats on home",
+    "state": "open",
+    "labels": ["frontend"],
+    "assignees": ["bob"],
+    "updated_at": "2026-04-01T10:00:00Z",
+    "project_status": "In Progress"
+  },
+  {
+    "number": 25,
+    "title": "Fix flaky test",
+    "body": "ci red sometimes",
+    "state": "open",
+    "labels": ["bug"],
+    "assignees": [],
+    "updated_at": "2025-11-01T10:00:00Z",
+    "project_status": "Ready"
+  },
+  {
+    "number": 26,
+    "title": "Add password reset",
+    "body": "emails?",
+    "state": "open",
+    "labels": [],
+    "assignees": [],
+    "updated_at": "2026-05-01T10:00:00Z",
+    "project_status": null
+  },
+  {
+    "number": 27,
+    "title": "Implement password reset email flow",
+    "body": "Forgot password emails",
+    "state": "open",
+    "labels": ["backend"],
+    "assignees": [],
+    "updated_at": "2026-05-02T10:00:00Z",
+    "project_status": "Backlog"
+  },
+  {
+    "number": 28,
+    "title": "Migrate to Postgres 16",
+    "body": "## Caveman\n- **Problem:** On PG14.\n- **Do this:** Upgrade to 16 in staging then prod.\n- **Done when:** app healthy on 16.\n\n## Files to change\n| Path | Why | Confidence |\n| docker-compose.yml | image tag | likely |\n\n## Acceptance criteria\n- [ ] staging on 16\n- [ ] migrations pass",
+    "state": "open",
+    "labels": ["infra"],
+    "assignees": ["alice"],
+    "updated_at": "2026-06-01T10:00:00Z",
+    "project_status": "Blocked"
+  },
+  {
+    "number": 29,
+    "title": "Work on things",
+    "body": "misc",
+    "state": "open",
+    "labels": [],
+    "assignees": [],
+    "updated_at": "2025-08-01T10:00:00Z",
+    "project_status": "In Progress"
+  },
+  {
+    "number": 30,
+    "title": "Add dark mode",
+    "body": "nice to have",
+    "state": "closed",
+    "labels": ["frontend"],
+    "assignees": [],
+    "updated_at": "2026-01-01T10:00:00Z",
+    "project_status": "Done"
+  }
+]

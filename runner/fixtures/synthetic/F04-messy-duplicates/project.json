@@ -1,0 +1,19 @@
+{
+  "title": "Portal board",
+  "number": 3,
+  "url": "https://github.com/users/acme/projects/3",
+  "fields": {
+    "Status": ["Backlog", "Ready", "In Progress", "Validation", "Done", "Blocked"]
+  },
+  "items": [
+    { "issue_number": 20, "status": "In Progress", "priority": "High" },
+    { "issue_number": 21, "status": "Backlog", "priority": "High" },
+    { "issue_number": 22, "status": "Ready", "priority": "Critical" },
+    { "issue_number": 23, "status": "Done", "priority": "Medium" },
+    { "issue_number": 24, "status": "In Progress", "priority": "Medium" },
+    { "issue_number": 25, "status": "Ready", "priority": "Low" },
+    { "issue_number": 27, "status": "Backlog", "priority": "Medium" },
+    { "issue_number": 28, "status": "Blocked", "priority": "High" },
+    { "issue_number": 29, "status": "In Progress", "priority": "Low" }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "must_include_types": ["CREATE_PROJECT", "CREATE_ISSUE"],
+  "forbid_types": ["DEDUPLICATE", "CLOSE_ISSUE"],
+  "min_create_issues": 3,
+  "max_create_issues": 12,
+  "known_issue_numbers": [],
+  "no_duplicate_create_for": ["auth", "login"],
+  "require_issue_quality_flags": true
+}

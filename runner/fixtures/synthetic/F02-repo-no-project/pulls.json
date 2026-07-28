@@ -1,0 +1,10 @@
+[
+  {
+    "number": 9,
+    "title": "WIP cart",
+    "state": "open",
+    "body": "Implements #2 partially",
+    "linked_issues": [2],
+    "updated_at": "2026-06-13T10:00:00Z"
+  }
+]

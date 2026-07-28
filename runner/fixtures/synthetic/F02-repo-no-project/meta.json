@@ -1,0 +1,16 @@
+{
+  "id": "F02-repo-no-project",
+  "kind": "synthetic",
+  "mode": 2,
+  "band": "M",
+  "title": "Repo with vague issues, no Project",
+  "description": "Existing issues need triage and a new Project.",
+  "repo": {
+    "owner": "acme",
+    "name": "shop-api",
+    "full_name": "acme/shop-api",
+    "default_branch": "main",
+    "description": "Shop checkout API",
+    "exists": true
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "must_include_types": ["CREATE_PROJECT", "UPDATE_ISSUE"],
+  "forbid_types": ["CREATE_REPOSITORY"],
+  "min_create_issues": 0,
+  "max_create_issues": 4,
+  "known_issue_numbers": [1, 2, 3, 4, 5, 6, 7, 8],
+  "no_duplicate_create_for": ["auth", "login", "JWT"],
+  "require_issue_quality_flags": true
+}

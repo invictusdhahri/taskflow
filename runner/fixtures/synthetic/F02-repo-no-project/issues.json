@@ -1,0 +1,82 @@
+[
+  {
+    "number": 1,
+    "title": "auth stuff",
+    "body": "need login",
+    "state": "open",
+    "labels": [],
+    "assignees": [],
+    "updated_at": "2026-06-01T10:00:00Z",
+    "project_status": null
+  },
+  {
+    "number": 2,
+    "title": "Add cart endpoint",
+    "body": "## Caveman\n- **Problem:** No cart API.\n- **Do this:** POST /cart/items\n- **Done when:** item appears in cart\n\n## Files to change\n| Path | Why | Confidence |\n| src/cart.ts | logic | likely |\n\n## Acceptance criteria\n- [ ] Given user, when POST /cart/items, then 201",
+    "state": "open",
+    "labels": ["backend"],
+    "assignees": ["alice"],
+    "updated_at": "2026-06-10T10:00:00Z",
+    "project_status": null
+  },
+  {
+    "number": 3,
+    "title": "fix checkout bug",
+    "body": "sometimes 500",
+    "state": "open",
+    "labels": ["bug"],
+    "assignees": [],
+    "updated_at": "2026-05-20T10:00:00Z",
+    "project_status": null
+  },
+  {
+    "number": 4,
+    "title": "Improve performance",
+    "body": "make it faster",
+    "state": "open",
+    "labels": [],
+    "assignees": [],
+    "updated_at": "2026-04-01T10:00:00Z",
+    "project_status": null
+  },
+  {
+    "number": 5,
+    "title": "Add JWT login",
+    "body": "Users need tokens",
+    "state": "open",
+    "labels": ["backend"],
+    "assignees": [],
+    "updated_at": "2026-06-11T10:00:00Z",
+    "project_status": null
+  },
+  {
+    "number": 6,
+    "title": "Document API",
+    "body": "## Caveman\n- **Problem:** No OpenAPI.\n- **Do this:** publish openapi.yaml\n- **Done when:** docs render\n\n## Files to change\n| Path | Why | Confidence |\n| docs/openapi.yaml | contract | likely |\n\n## Acceptance criteria\n- [ ] openapi.yaml checked in",
+    "state": "open",
+    "labels": ["docs"],
+    "assignees": ["bob"],
+    "updated_at": "2026-06-12T10:00:00Z",
+    "project_status": null
+  },
+  {
+    "number": 7,
+    "title": "webhook retries",
+    "body": "todo",
+    "state": "open",
+    "labels": [],
+    "assignees": [],
+    "updated_at": "2026-03-01T10:00:00Z",
+    "project_status": null
+  },
+  {
+    "number": 8,
+    "title": "Add healthcheck",
+    "body": "## Caveman\n- **Problem:** No /health.\n- **Do this:** GET /health returns 200\n- **Done when:** probe passes\n\n## Files to change\n| Path | Why | Confidence |\n| src/health.ts | route | likely |\n\n## Acceptance criteria\n- [ ] GET /health → 200 {\"ok\":true}",
+    "state": "closed",
+    "labels": [],
+    "assignees": ["alice"],
+    "updated_at": "2026-02-01T10:00:00Z",
+    "project_status": null
+  }
+]

@@ -1,0 +1,16 @@
+{
+  "id": "F01-fresh-bootstrap",
+  "kind": "synthetic",
+  "mode": 1,
+  "band": "L",
+  "title": "Fresh empty repo bootstrap",
+  "description": "Repository exists but has no issues and no Project. Mode 1-style MVP bootstrap.",
+  "repo": {
+    "owner": "acme",
+    "name": "notes-mvp",
+    "full_name": "acme/notes-mvp",
+    "default_branch": "main",
+    "description": "Minimal notes API",
+    "exists": true
+  }
+}

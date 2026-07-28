@@ -1,0 +1,16 @@
+{
+  "id": "F04-messy-duplicates",
+  "kind": "synthetic",
+  "mode": 3,
+  "band": "H",
+  "title": "Messy duplicates and wrong Status",
+  "description": "Near-duplicate auth issues, vague items, Done still In Progress, open PR overlap.",
+  "repo": {
+    "owner": "acme",
+    "name": "portal",
+    "full_name": "acme/portal",
+    "default_branch": "main",
+    "description": "Customer portal",
+    "exists": true
+  }
+}
