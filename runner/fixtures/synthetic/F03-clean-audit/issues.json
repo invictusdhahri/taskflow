@@ -1,0 +1,52 @@
+[
+  {
+    "number": 10,
+    "title": "Implement invoice PDF export",
+    "body": "## Caveman\n- **Problem:** Users cannot download invoices.\n- **Do this:** Add PDF export endpoint.\n- **Done when:** GET /invoices/:id/pdf returns a PDF.\n\n## Files to change\n| Path | Why | Confidence |\n| src/invoices/pdf.ts | generate PDF | likely |\n\n## Acceptance criteria\n- [ ] Given invoice id, when GET pdf, then application/pdf",
+    "state": "open",
+    "labels": ["feature"],
+    "assignees": ["alice"],
+    "updated_at": "2026-07-01T10:00:00Z",
+    "project_status": "Ready"
+  },
+  {
+    "number": 11,
+    "title": "Add Stripe webhook signature check",
+    "body": "## Caveman\n- **Problem:** Webhooks unauthenticated.\n- **Do this:** Verify Stripe signatures.\n- **Done when:** Bad sig returns 400.\n\n## Files to change\n| Path | Why | Confidence |\n| src/webhooks/stripe.ts | verify | likely |\n\n## Acceptance criteria\n- [ ] Invalid signature → 400",
+    "state": "open",
+    "labels": ["security"],
+    "assignees": ["alice"],
+    "updated_at": "2026-07-02T10:00:00Z",
+    "project_status": "In Progress"
+  },
+  {
+    "number": 12,
+    "title": "Fix timezone on invoice dates",
+    "body": "## Caveman\n- **Problem:** Dates show UTC only.\n- **Do this:** Format in account TZ.\n- **Done when:** UI shows local date.\n\n## Files to change\n| Path | Why | Confidence |\n| src/dates.ts | formatting | likely |\n\n## Acceptance criteria\n- [ ] Invoice date matches account timezone",
+    "state": "open",
+    "labels": ["bug"],
+    "assignees": ["bob"],
+    "updated_at": "2026-07-03T10:00:00Z",
+    "project_status": "Ready"
+  },
+  {
+    "number": 13,
+    "title": "Add rate limit to public quote API",
+    "body": "## Caveman\n- **Problem:** Quote API can be scraped.\n- **Do this:** 60 req/min per IP.\n- **Done when:** 429 after limit.\n\n## Files to change\n| Path | Why | Confidence |\n| src/middleware/rateLimit.ts | limiter | likely |\n\n## Acceptance criteria\n- [ ] 61st request in a minute returns 429",
+    "state": "open",
+    "labels": ["security"],
+    "assignees": ["bob"],
+    "updated_at": "2026-07-04T10:00:00Z",
+    "project_status": "Backlog"
+  },
+  {
+    "number": 14,
+    "title": "Document refund flow",
+    "body": "## Caveman\n- **Problem:** Refunds undocumented.\n- **Do this:** Write runbook section.\n- **Done when:** docs/refunds.md merged.\n\n## Files to change\n| Path | Why | Confidence |\n| docs/refunds.md | runbook | likely |\n\n## Acceptance criteria\n- [ ] docs/refunds.md exists with steps",
+    "state": "closed",
+    "labels": ["docs"],
+    "assignees": ["alice"],
+    "updated_at": "2026-06-01T10:00:00Z",
+    "project_status": "Done"
+  }
+]

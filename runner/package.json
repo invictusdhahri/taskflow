@@ -1,0 +1,28 @@
+{
+  "name": "taskflow-runner",
+  "version": "0.1.0",
+  "private": true,
+  "description": "TaskFlow OpenRouter planner (Gemini Flash) + optional model bench",
+  "type": "module",
+  "scripts": {
+    "plan": "node --import tsx src/plan.ts",
+    "bench": "node --import tsx src/bench.ts",
+    "snapshot": "node --import tsx src/snapshot.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "packageManager": "pnpm@9.15.9",
+  "engines": {
+    "node": ">=20",
+    "pnpm": ">=9"
+  },
+  "dependencies": {
+    "openai": "^4.104.0",
+    "yaml": "^2.8.0",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^22.16.5",
+    "tsx": "^4.20.3",
+    "typescript": "^5.8.3"
+  }
+}

@@ -1,0 +1,13 @@
+# Local / generated
+.DS_Store
+*.log
+
+# Runner package
+runner/node_modules/
+runner/dist/
+runner/.env
+runner/.cache/
+runner/results/
+runner/fixtures/snapshots/**
+!runner/fixtures/snapshots/.gitkeep
+runner/package-lock.json

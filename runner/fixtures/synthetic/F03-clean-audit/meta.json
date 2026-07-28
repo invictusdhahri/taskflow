@@ -1,0 +1,16 @@
+{
+  "id": "F03-clean-audit",
+  "kind": "synthetic",
+  "mode": 3,
+  "band": "L",
+  "title": "Clean small Project audit",
+  "description": "Well-formed issues on a Project; mostly KEEP.",
+  "repo": {
+    "owner": "acme",
+    "name": "billing",
+    "full_name": "acme/billing",
+    "default_branch": "main",
+    "description": "Billing service",
+    "exists": true
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "must_include_types": ["DEDUPLICATE", "UPDATE_ISSUE"],
+  "forbid_types": ["CREATE_REPOSITORY"],
+  "min_create_issues": 0,
+  "max_create_issues": 3,
+  "known_issue_numbers": [20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30],
+  "no_duplicate_create_for": ["login", "JWT", "auth", "dashboard", "password reset"],
+  "require_issue_quality_flags": true
+}
