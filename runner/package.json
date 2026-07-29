@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "plan": "node --import tsx src/plan.ts",
+    "apply": "node --import tsx src/apply.ts",
     "bench": "node --import tsx src/bench.ts",
     "snapshot": "node --import tsx src/snapshot.ts",
     "typecheck": "tsc --noEmit"
