@@ -177,7 +177,87 @@ export function scorePlan(plan: BenchPlan, pack: FixturePack): ScoreResult {
   };
 }
 
-/** Soft parse helper if model returns markdown-wrapped JSON. */
+/**
+ * Finds the index of the bracket that closes the one at `start`, respecting
+ * string literals (so a stray `{`/`}` inside a "notes" or "bugs" string —
+ * common when describing code — doesn't throw off the match). Returns -1 if
+ * the text ends before the structure closes (truncated model output).
+ */
+function findMatchingBracket(text: string, start: number): number {
+  const open = text[start];
+  const close = open === "{" ? "}" : "]";
+  let depth = 0;
+  let inString = false;
+  let escape = false;
+  for (let i = start; i < text.length; i++) {
+    const ch = text[i];
+    if (inString) {
+      if (escape) escape = false;
+      else if (ch === "\\") escape = true;
+      else if (ch === '"') inString = false;
+      continue;
+    }
+    if (ch === '"') {
+      inString = true;
+      continue;
+    }
+    if (ch === open) depth++;
+    else if (ch === close) {
+      depth--;
+      if (depth === 0) return i;
+    }
+  }
+  return -1;
+}
+
+/**
+ * Salvages a valid JSON value from text that's structurally incomplete
+ * (truncated at `finish_reason: length`), by tracking bracket/brace depth —
+ * respecting string literals — and cutting back to the last point every
+ * currently-open structure could be safely closed, dropping only the final
+ * (incomplete) element rather than losing the whole document.
+ */
+function repairTruncatedJson(text: string): unknown | null {
+  const stack: Array<"{" | "["> = [];
+  let inString = false;
+  let escape = false;
+  let bestCut: { index: number; stack: Array<"{" | "["> } | null = null;
+
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (inString) {
+      if (escape) escape = false;
+      else if (ch === "\\") escape = true;
+      else if (ch === '"') inString = false;
+      continue;
+    }
+    if (ch === '"') {
+      inString = true;
+      continue;
+    }
+    if (ch === "{" || ch === "[") {
+      stack.push(ch);
+    } else if (ch === "}" || ch === "]") {
+      stack.pop();
+      bestCut = { index: i + 1, stack: [...stack] };
+    } else if (ch === "," && stack.length > 0) {
+      bestCut = { index: i, stack: [...stack] };
+    }
+  }
+
+  if (!bestCut) return null;
+  let candidate = text.slice(0, bestCut.index);
+  for (let i = bestCut.stack.length - 1; i >= 0; i--) {
+    candidate += bestCut.stack[i] === "{" ? "}" : "]";
+  }
+  try {
+    return JSON.parse(candidate);
+  } catch {
+    return null;
+  }
+}
+
+/** Soft parse helper if model returns markdown-wrapped or truncated JSON. */
 export function extractJsonObject(text: string): unknown {
   const trimmed = text.trim();
   try {
@@ -185,14 +265,36 @@ export function extractJsonObject(text: string): unknown {
   } catch {
     /* continue */
   }
+
   const fence = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
   if (fence?.[1]) {
-    return JSON.parse(fence[1].trim());
+    try {
+      return JSON.parse(fence[1].trim());
+    } catch {
+      /* continue */
+    }
   }
+
   const start = trimmed.indexOf("{");
-  const end = trimmed.lastIndexOf("}");
-  if (start >= 0 && end > start) {
-    return JSON.parse(trimmed.slice(start, end + 1));
+  if (start >= 0) {
+    const end = findMatchingBracket(trimmed, start);
+    if (end >= 0) {
+      try {
+        return JSON.parse(trimmed.slice(start, end + 1));
+      } catch {
+        /* continue */
+      }
+    }
+    // Unbalanced — most likely truncated at max_tokens. Salvage whatever
+    // complete elements exist rather than losing the whole chunk/plan.
+    const repaired = repairTruncatedJson(trimmed.slice(start));
+    if (repaired != null) {
+      console.warn(
+        "  [warn] model output was truncated/malformed — salvaged a partial result (dropped the last incomplete element).",
+      );
+      return repaired;
+    }
   }
+
   throw new Error("Could not parse JSON plan from model output");
 }
