@@ -74,12 +74,38 @@ interface StatusField {
   backlogOptionId: string;
 }
 
+/** Projects explicitly linked to this repo (GitHub's own repo-project link), not just guessed from the owner's full list. */
+function findLinkedProjects(repo: string): Array<{ number: number; title: string }> {
+  const [owner, name] = repo.split("/");
+  const res = ghJson<{
+    data?: { repository?: { projectsV2?: { nodes?: Array<{ number: number; title: string }> } } };
+  }>([
+    "api",
+    "graphql",
+    "-f",
+    `query=query{repository(owner:"${owner}",name:"${name}"){projectsV2(first:10){nodes{number title}}}}`,
+  ]);
+  return res.data?.repository?.projectsV2?.nodes ?? [];
+}
+
 function resolveProject(
-  repoOwner: string,
+  repo: string,
   opts: { projectOwner?: string; projectNumber?: number },
 ): ProjectRef {
+  const repoOwner = repo.split("/")[0]!;
   const owner = opts.projectOwner ?? repoOwner;
   let number = opts.projectNumber;
+
+  // Prefer a Project explicitly linked to this repo — reliable regardless of
+  // its title (e.g. "@user's untitled project" still counts), and avoids
+  // needing --project-owner/--project-number just because the account has
+  // other, unrelated Projects.
+  if (number == null) {
+    const linked = findLinkedProjects(repo);
+    if (linked.length === 1) {
+      number = linked[0]!.number;
+    }
+  }
 
   if (number == null) {
     const list = ghJson<{ projects?: Array<{ number: number; title: string }> }>([
@@ -99,7 +125,7 @@ function resolveProject(
           ? `No Projects found for owner ${owner}. Bootstrap a Board with a Status field via the TaskFlow skill first, or pass --project-owner/--project-number.`
           : `${projects.length} Projects found for owner ${owner} (${projects
               .map((p) => `#${p.number} ${p.title}`)
-              .join(", ")}). Pass --project-owner/--project-number to disambiguate.`,
+              .join(", ")}), and none is uniquely linked to ${repo}. Pass --project-owner/--project-number to disambiguate.`,
       );
     }
     number = projects[0]!.number;
@@ -256,7 +282,6 @@ async function main(): Promise<void> {
       ? [planFile.meta.repo]
       : [];
   if (!repoList.length) throw new Error(`Plan ${planPath} has no meta.repo or meta.repos`);
-  const primaryRepoOwner = repoList[0]!.split("/")[0]!;
   const snapshotId = planFile.meta.snapshot_id ?? "unknown";
 
   const createOps = planFile.plan.operations.filter((op) => op.type === "CREATE_ISSUE");
@@ -273,7 +298,7 @@ async function main(): Promise<void> {
   // Fail fast if there's nowhere to write Status — per the decided precondition,
   // this never auto-provisions a board. One shared Project across repos is already
   // how Projects v2 works, so this stays a single resolution even for group plans.
-  const project = resolveProject(primaryRepoOwner, {
+  const project = resolveProject(repoList[0]!, {
     projectOwner: projectOwnerArg,
     projectNumber: projectNumberArg ? Number(projectNumberArg) : undefined,
   });
