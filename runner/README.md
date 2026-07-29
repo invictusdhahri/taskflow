@@ -68,7 +68,9 @@ At plan/apply time this is layered on top of the repo's real, live collaborators
 
 **Scheduling:** copy [`ci/taskflow-schedule.yml.example`](ci/taskflow-schedule.yml.example) into `<target-repo>/.github/workflows/`. It needs a `TASKFLOW_PROJECTS_TOKEN` secret plus `OPENROUTER_API_KEY` — see [Authentication](#authentication-pat-vs-github-app) below for which one to use and why. See the file's header comments for the full precondition and deployment notes.
 
-Other `apply` flags: `--max-creates N` (default 5, caps issues created per run), `--project-owner`/`--project-number` (disambiguate when a repo has more than one linked Project), `--model`, `--max-usd` (per-call soft cost cap, default `TASKFLOW_MAX_USD_PER_RUN` / $0.40 — `apply` makes one render call per `CREATE_ISSUE` plus one batched duplicate-check call, a smaller cost profile than `plan`'s full-codebase budget).
+**Project resolution:** by default, `apply` looks for a Project explicitly linked to the target repo and uses it automatically — no flags needed, works regardless of the board's title (an "untitled project" still counts if it's genuinely linked to that repo). If the repo has zero or more than one linked Project, it falls back to asking you to disambiguate. `--project-owner`/`--project-number` always take priority over auto-detection when passed — use them to pin a specific board (e.g. when a repo's own linked-Project state is ambiguous, or you want a board that isn't linked to the repo at all).
+
+Other `apply` flags: `--max-creates N` (default 5, caps issues created per run), `--model`, `--max-usd` (per-call soft cost cap, default `TASKFLOW_MAX_USD_PER_RUN` / $0.40 — `apply` makes one render call per `CREATE_ISSUE` plus one batched duplicate-check call, a smaller cost profile than `plan`'s full-codebase budget).
 
 ## Authentication (PAT vs GitHub App)
 
