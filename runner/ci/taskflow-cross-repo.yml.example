@@ -1,0 +1,146 @@
+# Copy this file to <one-of-the-member-repos>/.github/workflows/taskflow-cross-repo.yml
+# (or a small dedicated repo — it doesn't have to live in either member).
+#
+# This is the JOINT planning mode: it looks at two or more related repos together
+# (e.g. a backend + its frontend) so cross-repo mismatches can actually be caught
+# (a frontend calling a route the backend never implemented, etc). It reuses the
+# same per-repo findings pipeline as the single-repo workflow (cheap, cached) and
+# adds one additional joint merge call across condensed findings + each repo's
+# declared `.taskflow/surface.json` files — not raw codebases — to keep the added
+# cost small. See runner/README.md for the full design and cost breakdown.
+#
+# This workflow can live in EITHER member repo, or neither — it works from
+# wherever it runs because the TaskFlow App token below already has read/write
+# access across every repo it's installed on, unlike the default per-repo
+# GITHUB_TOKEN. The App must be installed on EVERY repo in the group.
+#
+# PRECONDITION (apply.ts fails fast otherwise, it never auto-provisions a board):
+#   Every member repo — or at least one shared Project you point --project-owner/
+#   --project-number at — must already have a Projects v2 board with a Status
+#   field carrying Backlog/Ready options, bootstrapped once via the interactive
+#   TaskFlow skill.
+#
+# OPTIONAL: each member repo may commit `.taskflow/surface.json`:
+#   { "globs": ["src/routes/**", "openapi.yaml"] }
+# declaring which of its own files define its public interface — those are sent
+# in full to the joint merge call; everything else only as condensed findings.
+#
+# REQUIRED SECRETS — same org-level App secrets as the single-repo template:
+#   OPENROUTER_API_KEY       OpenRouter key for the plan/render/duplicate-check calls.
+#   TASKFLOW_APP_ID          The TaskFlow GitHub App's App ID.
+#   TASKFLOW_APP_PRIVATE_KEY The TaskFlow GitHub App's private key (.pem contents).
+# See runner/README.md#github-app-setup.
+
+name: TaskFlow cross-repo
+
+on:
+  schedule:
+    - cron: "0 9 * * 1" # Monday 09:00 UTC — see the single-repo template re: cadence
+  workflow_dispatch:
+    inputs:
+      repos:
+        description: "Comma-separated OWNER/REPO list (overrides TASKFLOW_GROUP_REPOS below)"
+        required: false
+
+env:
+  # Default group members for the scheduled trigger — edit for your own pair/group.
+  TASKFLOW_GROUP_REPOS: "owner/backend-repo,owner/frontend-repo"
+
+jobs:
+  plan-and-apply:
+    runs-on: ubuntu-latest
+    env:
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+    steps:
+      - name: Resolve group repos
+        id: group
+        run: |
+          REPOS="${{ github.event.inputs.repos }}"
+          if [ -z "$REPOS" ]; then REPOS="$TASKFLOW_GROUP_REPOS"; fi
+          echo "repos=$REPOS" >> "$GITHUB_OUTPUT"
+
+      - name: Generate TaskFlow App token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.TASKFLOW_APP_ID }}
+          private-key: ${{ secrets.TASKFLOW_APP_PRIVATE_KEY }}
+
+      - name: Export GH_TOKEN for the rest of this job
+        run: echo "GH_TOKEN=${{ steps.app-token.outputs.token }}" >> "$GITHUB_ENV"
+
+      - name: Checkout taskflow runner
+        uses: actions/checkout@v4
+        with:
+          repository: invictusdhahri/taskflow
+          # Pin to a released tag/sha once this ships, so this automation doesn't
+          # silently pick up unreleased runner changes.
+          ref: main
+          path: .taskflow-runner
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: .taskflow-runner/runner/pnpm-lock.yaml
+
+      - name: Install runner deps
+        working-directory: .taskflow-runner/runner
+        run: pnpm install --frozen-lockfile
+
+      - name: Restore findings cache
+        uses: actions/cache@v4
+        with:
+          path: .taskflow-runner/runner/results/cache
+          key: taskflow-cache-group-${{ steps.group.outputs.repos }}-${{ github.run_id }}
+          restore-keys: |
+            taskflow-cache-group-${{ steps.group.outputs.repos }}-
+
+      - name: Joint plan (per-repo findings + one cross-repo merge)
+        id: plan
+        working-directory: .taskflow-runner/runner
+        run: |
+          set -o pipefail
+          pnpm plan -- --repos "${{ steps.group.outputs.repos }}" --id group-${{ github.run_id }} --skip-if-unchanged | tee plan.log
+          if grep -q '^SKIPPED=true$' plan.log; then
+            echo "skipped=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skipped=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # --skip-if-unchanged skips the whole run (no clone, no OpenRouter call) only
+      # when EVERY member repo is unchanged since the last successful joint run —
+      # a change in any single member still triggers it, since that's the case it
+      # exists to catch. Same issue-only-change trade-off as the single-repo mode.
+      - name: Apply (routes each CREATE_ISSUE to its target repo, gates Ready/Backlog)
+        if: steps.plan.outputs.skipped != 'true'
+        working-directory: .taskflow-runner/runner
+        run: pnpm apply -- --plan results/plans/group-${{ github.run_id }}.json
+
+      - name: Job summary
+        if: always()
+        working-directory: .taskflow-runner/runner
+        run: |
+          latest=$(ls -t results/runs/apply_*.json 2>/dev/null | head -n 1)
+          if [ -n "$latest" ]; then
+            {
+              echo "### TaskFlow cross-repo apply summary"
+              echo '```json'
+              cat "$latest"
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload plan + apply report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: taskflow-cross-repo-run-${{ github.run_id }}
+          path: |
+            .taskflow-runner/runner/results/plans/*.json
+            .taskflow-runner/runner/results/runs/*.json
+          retention-days: 30

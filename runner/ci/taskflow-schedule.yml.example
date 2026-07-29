@@ -1,0 +1,129 @@
+# Copy this file to <your-target-repo>/.github/workflows/taskflow-schedule.yml.
+#
+# This does NOT run inside the taskflow repo itself — it's a template for any
+# repo you want TaskFlow to plan and create issues for on a schedule. It runs
+# unattended: it creates real GitHub issues, gated onto Status=Ready (assigned)
+# vs Status=Backlog (unassigned, with a note) by a live duplicate check and the
+# Definition of Ready checklist. See runner/README.md for the full design.
+#
+# PRECONDITION (apply.ts fails fast otherwise, it never auto-provisions a board):
+#   The target repo must already have a Projects v2 board with a Status field
+#   that has Backlog/Ready options — bootstrap it once via the interactive
+#   TaskFlow skill before turning this on.
+#
+# OPTIONAL: commit `.taskflow/roster.json` to the target repo — a flat
+#   { "github-login": ["skill", "tags"] } map layered on top of the repo's real
+#   collaborators, so the planner can suggest a confident assignee.
+#
+# REQUIRED SECRETS — set once at the ORG (or account) level, not per repo, so
+# adding TaskFlow to a new repo never means minting a new token:
+#   OPENROUTER_API_KEY       OpenRouter key for the plan/render/duplicate-check calls.
+#   TASKFLOW_APP_ID          The TaskFlow GitHub App's App ID.
+#   TASKFLOW_APP_PRIVATE_KEY The TaskFlow GitHub App's private key (.pem contents).
+# See runner/README.md#github-app-setup for how to register + install the App once
+# across every repo you want this on — the default GITHUB_TOKEN cannot write
+# Projects v2 fields on a user/org-owned board, which is why this exists at all.
+
+name: TaskFlow schedule
+
+on:
+  schedule:
+    # Weekly to start — arbitrary "every N days" isn't a single cron expression.
+    # Adjust the day/time, or add a modulo-day guard in a script step if you
+    # genuinely need a non-weekly cadence.
+    - cron: "0 9 * * 1" # Monday 09:00 UTC
+  workflow_dispatch: {}
+
+jobs:
+  plan-and-apply:
+    runs-on: ubuntu-latest
+    env:
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+    steps:
+      - name: Generate TaskFlow App token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.TASKFLOW_APP_ID }}
+          private-key: ${{ secrets.TASKFLOW_APP_PRIVATE_KEY }}
+
+      - name: Export GH_TOKEN for the rest of this job
+        run: echo "GH_TOKEN=${{ steps.app-token.outputs.token }}" >> "$GITHUB_ENV"
+
+      - name: Checkout this repo
+        uses: actions/checkout@v4
+
+      - name: Checkout taskflow runner
+        uses: actions/checkout@v4
+        with:
+          repository: invictusdhahri/taskflow
+          # Pin to a released tag/sha once this ships, so this repo's automation
+          # doesn't silently pick up unreleased runner changes.
+          ref: main
+          path: .taskflow-runner
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: .taskflow-runner/runner/pnpm-lock.yaml
+
+      - name: Install runner deps
+        working-directory: .taskflow-runner/runner
+        run: pnpm install --frozen-lockfile
+
+      - name: Restore findings cache
+        uses: actions/cache@v4
+        with:
+          path: .taskflow-runner/runner/results/cache
+          key: taskflow-cache-${{ github.repository }}-${{ github.run_id }}
+          restore-keys: |
+            taskflow-cache-${{ github.repository }}-
+
+      - name: Plan (read-only snapshot + propose-only plan)
+        id: plan
+        working-directory: .taskflow-runner/runner
+        run: |
+          set -o pipefail
+          pnpm plan -- --repo ${{ github.repository }} --id ci-${{ github.run_id }} --skip-if-unchanged | tee plan.log
+          if grep -q '^SKIPPED=true$' plan.log; then
+            echo "skipped=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skipped=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # --skip-if-unchanged means: if HEAD hasn't moved since the last successful
+      # run, skip entirely (no clone, no OpenRouter call). Trade-off: an issue-only
+      # change (no new commit) won't trigger a re-run either — see runner/README.md.
+      - name: Apply (create issues, gate Ready/Backlog)
+        if: steps.plan.outputs.skipped != 'true'
+        working-directory: .taskflow-runner/runner
+        run: pnpm apply -- --plan results/plans/ci-${{ github.run_id }}.json
+
+      - name: Job summary
+        if: always()
+        working-directory: .taskflow-runner/runner
+        run: |
+          latest=$(ls -t results/runs/apply_*.json 2>/dev/null | head -n 1)
+          if [ -n "$latest" ]; then
+            {
+              echo "### TaskFlow apply summary"
+              echo '```json'
+              cat "$latest"
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload plan + apply report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: taskflow-run-${{ github.run_id }}
+          path: |
+            .taskflow-runner/runner/results/plans/*.json
+            .taskflow-runner/runner/results/runs/*.json
+          retention-days: 30
