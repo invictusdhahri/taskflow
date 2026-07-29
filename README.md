@@ -62,13 +62,16 @@ npx skills add .
 
 ## Runner
 
-The interactive skill stays under `skills/taskflow/`. The [`runner/`](./runner/) package snapshots a GitHub repo (issues + codebase), calls the default planner via OpenRouter, and writes a **propose-only** change plan — no GitHub writes.
+The interactive skill stays under `skills/taskflow/`. The [`runner/`](./runner/) package snapshots a GitHub repo (issues + **full text codebase**), calls the default planner via OpenRouter, and writes a **propose-only** change plan — no GitHub writes. Repeat runs reuse a content-hash findings cache so only changed files are re-analyzed.
 
 ```bash
 cd runner && cp .env.example .env && pnpm install   # set OPENROUTER_API_KEY
 pnpm plan -- --repo OWNER/REPO
 # → results/plans/<id>.json
+pnpm plan -- --repo OWNER/REPO --dry-run   # size / cache / cost estimate
 ```
+
+An optional `pnpm apply` step turns a plan's `CREATE_ISSUE` operations into real GitHub issues on a Ready/Backlog trust gate (duplicate-check + Definition of Ready + a confident roster-matched assignee), so a scheduled GitHub Actions workflow can run mostly unattended. Everything else in the plan stays propose-only. See [`runner/README.md`](./runner/README.md#apply-scheduled--unattended-issue-creation) and [`runner/ci/taskflow-schedule.yml.example`](./runner/ci/taskflow-schedule.yml.example).
 
 Bench overview (smoke → matrix → holdout; fixtures anonymized):
 
@@ -88,7 +91,7 @@ taskflow/
 ├── .github/
 │   └── workflows/
 │       └── validate.yml
-├── runner/                   # plan + snapshot + optional bench
+├── runner/                   # plan + apply + snapshot + optional bench
 └── skills/
     └── taskflow/
         ├── SKILL.md
@@ -139,7 +142,7 @@ Use auto-run / terminal allow settings so approved `gh` and git commands are not
 
 - Not an npm library
 - Not a hosted SaaS
-- Not automatic issue spam — TaskFlow proposes a versioned change plan and waits for approval
+- Not automatic issue spam — the interactive skill always proposes a versioned change plan and waits for Continue/Refuse approval before writing. The optional, opt-in scheduled [`runner/apply`](./runner/README.md#apply-scheduled--unattended-issue-creation) path creates issues unattended, but gates every one through a live duplicate-check and Definition of Ready check first, so anything uncertain lands in `Backlog` rather than being pushed on the team as ready, assigned work
 
 ## License
 
