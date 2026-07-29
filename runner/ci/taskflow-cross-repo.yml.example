@@ -92,7 +92,9 @@ jobs:
 
       - name: Install runner deps
         working-directory: .taskflow-runner/runner
-        run: pnpm install --frozen-lockfile
+        # --ignore-workspace: see the single-repo template's comment — needed
+        # whenever a member repo is itself a pnpm workspace.
+        run: pnpm install --frozen-lockfile --ignore-workspace
 
       - name: Restore findings cache
         uses: actions/cache@v4

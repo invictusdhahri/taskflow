@@ -77,7 +77,12 @@ jobs:
 
       - name: Install runner deps
         working-directory: .taskflow-runner/runner
-        run: pnpm install --frozen-lockfile
+        # --ignore-workspace: if the target repo is itself a pnpm workspace,
+        # pnpm otherwise walks up, finds ITS pnpm-workspace.yaml, and silently
+        # skips installing the runner's own deps since it isn't a declared
+        # member — no error, just a missing node_modules later. Verified: this
+        # flag is what actually fixes it (a .npmrc alone did not).
+        run: pnpm install --frozen-lockfile --ignore-workspace
 
       - name: Restore findings cache
         uses: actions/cache@v4
