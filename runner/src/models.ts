@@ -1,12 +1,6 @@
 import type { ModelConfig } from "./types.js";
 
-/**
- * Production default — won real-repo holdout (4/4 valid plans with codebase context).
- * Synthetic matrix often favors cheaper models; reliability on real code wins for ship.
- */
-export const DEFAULT_MODEL_ID = "gemini-flash";
-
-export const DEFAULT_MODEL: ModelConfig = {
+const GEMINI_FLASH: ModelConfig = {
   id: "gemini-flash",
   slug: "google/gemini-2.5-flash",
   tier: "cheap",
@@ -14,9 +8,27 @@ export const DEFAULT_MODEL: ModelConfig = {
   estOutputPerMillion: 2.5,
 };
 
+const GEMINI_PRO: ModelConfig = {
+  id: "gemini-pro",
+  slug: "google/gemini-2.5-pro",
+  tier: "mid",
+  estInputPerMillion: 1.25,
+  estOutputPerMillion: 10,
+};
+
+/**
+ * Production default. Flash is cheaper but noticeably shallower on real repos —
+ * it pattern-matches generic hygiene (outdated deps, missing pagination) rather
+ * than reasoning about actual product-impacting bugs. Pro costs more per run but
+ * real-world runs have stayed cents-to-low-dollars — use --model gemini-flash to
+ * go back to the cheaper tier for a quick/cheap pass.
+ */
+export const DEFAULT_MODEL_ID = "gemini-pro";
+export const DEFAULT_MODEL: ModelConfig = GEMINI_PRO;
+
 /** Optional models for offline bench comparisons only — not used by `pnpm plan`. */
 export const BENCH_MODELS: ModelConfig[] = [
-  DEFAULT_MODEL,
+  GEMINI_FLASH,
   {
     id: "deepseek-chat",
     slug: "deepseek/deepseek-chat-v3-0324",
@@ -31,13 +43,7 @@ export const BENCH_MODELS: ModelConfig[] = [
     estInputPerMillion: 0.4,
     estOutputPerMillion: 1.6,
   },
-  {
-    id: "gemini-pro",
-    slug: "google/gemini-2.5-pro",
-    tier: "mid",
-    estInputPerMillion: 1.25,
-    estOutputPerMillion: 10,
-  },
+  GEMINI_PRO,
 ];
 
 /** @deprecated Use BENCH_MODELS — kept so existing bench smoke CLI keeps working. */

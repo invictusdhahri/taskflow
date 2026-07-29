@@ -59,9 +59,14 @@ export function openRouterMaxRetries(): number {
   return Number(process.env.OPENROUTER_MAX_RETRIES ?? 1);
 }
 
-/** Cap completion length so providers cannot stream 16k+ runaway outputs. */
+/**
+ * Cap completion length so providers cannot stream runaway outputs. Deliberately
+ * generous (not the old 2500) — a model forced to cram findings into a tight
+ * budget writes shorter, shallower reasoning per item. Real-world cost at this
+ * budget has stayed cents-to-low-dollars per run.
+ */
 export function openRouterMaxTokens(): number {
-  return Number(process.env.OPENROUTER_MAX_TOKENS ?? 2500);
+  return Number(process.env.OPENROUTER_MAX_TOKENS ?? 8000);
 }
 
 export function createOpenRouterClient(): OpenAI {

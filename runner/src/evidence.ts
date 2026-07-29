@@ -227,10 +227,19 @@ export function partitionCodebaseFiles(
   return chunks;
 }
 
+const DEPTH_OVER_COVERAGE = `DEPTH OVER COVERAGE — the most important instruction here:
+- Do not produce a finding just because a file exists. A single well-reasoned bug that traces an actual broken behavior is worth more than ten generic hygiene notes. It is normal, expected, and preferred for most files to have nothing worth reporting.
+- Prioritize what a real user or the business would actually notice: incorrect logic, broken edge cases, data-integrity risk, security gaps, race conditions, silent failures, misleading error handling, a feature that's half-implemented or doesn't do what its name/docs claim.
+- Deprioritize — only include if genuinely severe, and say why it's severe: outdated dependencies, missing pagination, code style, "make X configurable," documentation gaps, generic refactoring suggestions. These are almost never worth a CREATE_ISSUE on their own. Do not manufacture one just to have something to report.
+- For every finding, name the actual mechanism: the specific input, sequence, or state that triggers the problem, and what a user or the system would observe as a result. "This function is complex" is not a finding. "When X happens while Y is already true, this silently drops the update because Z" is.
+- Fewer, sharper findings beat more, shallow ones. Never pad output to fill space.`;
+
 export const PLAN_JSON_INSTRUCTIONS = `You are TaskFlow in propose-only mode.
 Using the skill rules and the frozen GitHub evidence JSON, produce a versioned GITHUB CHANGE PLAN.
 
-When \`codebase.files\` is present, read the actual source — infer bugs, gaps, and features from code + issues together. Reference real file paths from the codebase in UPDATE/CREATE operations (set has_files true when the plan cites concrete paths).
+${DEPTH_OVER_COVERAGE}
+
+When \`codebase.files\` is present, read the actual source — infer bugs, gaps, and features from code + issues together, applying the depth standard above. Reference real file paths from the codebase in UPDATE/CREATE operations (set has_files true when the plan cites concrete paths).
 
 When \`roster\` is present (array of \`{login, skills, source}\`), it lists real assignable collaborators and any known skill tags. For CREATE_ISSUE only: propose \`suggested_assignee\` with \`assignee_confidence: "confident"\` ONLY when exactly one roster login has a clear, unambiguous skill-tag overlap with the issue's subject matter. If multiple logins plausibly match, no login has a matching tag, or roster is absent/empty, omit \`suggested_assignee\` entirely (do not guess). Use \`assignee_reason\` for a short one-line justification when you do suggest someone.
 
@@ -275,23 +284,25 @@ Rules:
 
 export const FINDINGS_JSON_INSTRUCTIONS = `You are TaskFlow analyzing source files for a propose-only GitHub plan.
 
+${DEPTH_OVER_COVERAGE}
+
 Given the skill rules and a JSON payload of source files (and optional GitHub context), return ONLY valid JSON:
 
 {
   "findings": [
     {
       "path": "relative/file.ts",
-      "bugs": ["short issue"],
-      "gaps": ["missing feature or coverage"],
-      "features": ["suggested work"],
+      "bugs": ["specific mechanism + observable effect, not a vague label"],
+      "gaps": ["missing feature or coverage — only if it actually matters"],
+      "features": ["suggested work — only if it's a real, well-scoped opportunity"],
       "notes": "optional one-liner"
     }
   ]
 }
 
 Rules:
-- Include an entry for every file path that has a noteworthy finding; omit files with nothing useful.
-- Be concrete; cite symbols or behaviors you saw in the content.
+- Most files should NOT appear in this list at all — only include a file when you found something that meets the depth standard above. An empty or near-empty \`findings\` array for a batch of clean files is a correct, good result, not a failure.
+- Be concrete; cite symbols, function names, and the actual behavior you saw in the content — not just "this could be improved."
 - Do not invent paths that are not in the payload.
 - No markdown fences, no prose outside JSON.`;
 
@@ -300,6 +311,10 @@ export const MERGE_JSON_INSTRUCTIONS = `You are TaskFlow in propose-only mode.
 You receive:
 1) Frozen GitHub evidence (issues, PRs, project, readme, and optionally roster)
 2) Codebase findings aggregated from a full-repo (or incremental) analysis
+
+${DEPTH_OVER_COVERAGE}
+
+Not every finding deserves its own CREATE_ISSUE — apply the same depth standard here. A short list of well-reasoned issues beats one CREATE_ISSUE per finding.
 
 Produce a versioned GITHUB CHANGE PLAN. Prefer UPDATE / DEDUPLICATE / KEEP over redundant CREATE.
 Use findings + issues together. Cite real file paths when proposing CREATE/UPDATE (has_files).
@@ -327,6 +342,8 @@ You receive one entry per repo:
 }
 
 \`findings\` are condensed per-file notes from each repo's own analysis — use them for general awareness. \`surface_files\` are each repo's own declared public-interface files (routes, schemas, exported types) in full text — use these specifically to catch things that only become visible when comparing repos, such as a frontend calling an endpoint/field the backend doesn't define, or a backend response shape a frontend doesn't expect. Do not invent cross-repo issues that aren't actually supported by the surface files or findings.
+
+${DEPTH_OVER_COVERAGE}
 
 Produce ONE versioned GITHUB CHANGE PLAN covering all repos. Every operation MUST set \`"repo"\` to the exact repo string it targets (from the \`repo\` field of one of the input entries) — never omit it, never invent a repo not in the payload. Prefer UPDATE / DEDUPLICATE / KEEP over redundant CREATE, per repo's own issues.
 
