@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import {
   existsSync,
@@ -10,6 +11,9 @@ import {
 } from "node:fs";
 import { join, relative } from "node:path";
 import { runnerRoot } from "./loadSkill.js";
+import type { CodebaseFile, CodebaseIndex } from "./types.js";
+
+export type { CodebaseFile, CodebaseIndex };
 
 /** Directory names skipped when walking a repo clone. */
 const SKIP_DIRS = new Set([
@@ -84,39 +88,33 @@ const ALWAYS_INCLUDE = new Set([
   "README.md",
 ]);
 
-export interface CodebaseFile {
-  path: string;
-  size: number;
-  content: string;
-  truncated?: boolean;
-}
-
 export interface CodebaseSkip {
   path: string;
   reason: string;
 }
 
-export interface CodebaseIndex {
-  collected_at: string;
-  branch: string;
-  total_files: number;
-  total_bytes: number;
-  skipped: CodebaseSkip[];
-  files: CodebaseFile[];
-}
-
+/** Default 2MB per file — whole-file reads for planning. */
 export function snapshotMaxCodeFileBytes(): number {
-  return Number(process.env.SNAPSHOT_MAX_CODE_FILE_BYTES ?? 120_000);
+  return Number(process.env.SNAPSHOT_MAX_CODE_FILE_BYTES ?? 2_000_000);
 }
 
+/** Default 50MB total text — fail loud if exceeded rather than silent omit. */
 export function snapshotMaxCodeTotalBytes(): number {
-  return Number(process.env.SNAPSHOT_MAX_CODE_TOTAL_BYTES ?? 12_000_000);
+  return Number(process.env.SNAPSHOT_MAX_CODE_TOTAL_BYTES ?? 50_000_000);
+}
+
+export function hashContent(content: string): string {
+  return createHash("sha256").update(content, "utf8").digest("hex");
 }
 
 function isTextCandidate(relPath: string): boolean {
   const base = relPath.split("/").pop() ?? relPath;
   if (ALWAYS_INCLUDE.has(base)) return true;
-  if (/\.(lock|lockb|png|jpe?g|gif|webp|ico|svg|woff2?|ttf|eot|mp4|zip|tar|gz|pdf|exe|dll|so|dylib|bin|wasm|map)$/i.test(base)) {
+  if (
+    /\.(lock|lockb|png|jpe?g|gif|webp|ico|svg|woff2?|ttf|eot|mp4|zip|tar|gz|pdf|exe|dll|so|dylib|bin|wasm|map)$/i.test(
+      base,
+    )
+  ) {
     return false;
   }
   if (base.startsWith(".env") && base !== ".env.example") return false;
@@ -125,7 +123,10 @@ function isTextCandidate(relPath: string): boolean {
   return TEXT_EXTENSIONS.has(base.slice(dot).toLowerCase());
 }
 
-function readFileCapped(absPath: string, maxBytes: number): { content: string; truncated: boolean; size: number } {
+function readFileCapped(
+  absPath: string,
+  maxBytes: number,
+): { content: string; truncated: boolean; size: number } {
   const size = statSync(absPath).size;
   if (size <= maxBytes) {
     return { content: readFileSync(absPath, "utf8"), truncated: false, size };
@@ -138,13 +139,39 @@ function readFileCapped(absPath: string, maxBytes: number): { content: string; t
   };
 }
 
+export function resolveGitHeadSha(repoDir: string): string | undefined {
+  const r = spawnSync("git", ["-C", repoDir, "rev-parse", "HEAD"], {
+    encoding: "utf8",
+  });
+  if (r.status !== 0) return undefined;
+  return (r.stdout || "").trim() || undefined;
+}
+
 /**
- * Walk a local repo directory and collect text source files.
+ * Throw if any text file was skipped due to total budget — planning must not
+ * silently omit source.
+ */
+export function assertNoTotalBudgetSkips(index: CodebaseIndex): void {
+  const budgetSkips = index.skipped.filter((s) => s.reason === "total_budget");
+  if (budgetSkips.length === 0) return;
+  const sample = budgetSkips
+    .slice(0, 8)
+    .map((s) => s.path)
+    .join(", ");
+  throw new Error(
+    `Codebase capture hit SNAPSHOT_MAX_CODE_TOTAL_BYTES (${snapshotMaxCodeTotalBytes()}): ` +
+      `${budgetSkips.length} text file(s) omitted (e.g. ${sample}). ` +
+      `Raise SNAPSHOT_MAX_CODE_TOTAL_BYTES — TaskFlow plan refuses partial codebases.`,
+  );
+}
+
+/**
+ * Walk a local repo directory and collect text source files (whole-file when under cap).
  */
 export function collectCodebaseFromDir(
   rootDir: string,
   branch: string,
-  opts?: { maxFileBytes?: number; maxTotalBytes?: number },
+  opts?: { maxFileBytes?: number; maxTotalBytes?: number; headSha?: string },
 ): CodebaseIndex {
   const maxFileBytes = opts?.maxFileBytes ?? snapshotMaxCodeFileBytes();
   const maxTotalBytes = opts?.maxTotalBytes ?? snapshotMaxCodeTotalBytes();
@@ -153,9 +180,7 @@ export function collectCodebaseFromDir(
   let totalBytes = 0;
 
   function walk(dir: string): void {
-    if (totalBytes >= maxTotalBytes) return;
     for (const ent of readdirSync(dir, { withFileTypes: true })) {
-      if (totalBytes >= maxTotalBytes) break;
       const abs = join(dir, ent.name);
       const rel = relative(rootDir, abs).replace(/\\/g, "/");
       if (ent.isDirectory()) {
@@ -177,7 +202,13 @@ export function collectCodebaseFromDir(
           skipped.push({ path: rel, reason: "total_budget" });
           continue;
         }
-        files.push({ path: rel, size, content, ...(truncated ? { truncated: true } : {}) });
+        files.push({
+          path: rel,
+          size,
+          content,
+          content_hash: hashContent(content),
+          ...(truncated ? { truncated: true } : {}),
+        });
         totalBytes += content.length;
       } catch {
         skipped.push({ path: rel, reason: "read_error" });
@@ -188,9 +219,12 @@ export function collectCodebaseFromDir(
   walk(rootDir);
   files.sort((a, b) => a.path.localeCompare(b.path));
 
+  const head_sha = opts?.headSha ?? resolveGitHeadSha(rootDir);
+
   return {
     collected_at: new Date().toISOString(),
     branch,
+    ...(head_sha ? { head_sha } : {}),
     total_files: files.length,
     total_bytes: totalBytes,
     skipped,
@@ -226,7 +260,7 @@ export function cleanupClone(cloneDir: string): void {
   }
 }
 
-/** Prefer configs + src/app/lib paths when fitting codebase into a token budget. */
+/** Order files for chunk boundaries (configs / src first). Does not drop files. */
 export function prioritizeCodebaseFiles(files: CodebaseFile[]): CodebaseFile[] {
   const score = (p: string): number => {
     const base = p.split("/").pop() ?? p;

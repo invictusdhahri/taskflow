@@ -8,7 +8,6 @@
  *
  * Switch GitHub accounts with `gh auth switch` before running if needed.
  */
-import { spawnSync } from "node:child_process";
 import { mkdirSync, writeFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -19,7 +18,10 @@ import {
   cloneRepoForSnapshot,
   collectCodebaseFromDir,
   writeCodebaseIndex,
+  assertNoTotalBudgetSkips,
+  resolveGitHeadSha,
 } from "./codebase.js";
+import { ghJson, ghText } from "./gh.js";
 import type { FixtureIssue, FixtureMeta, FixtureProject, FixturePull } from "./types.js";
 
 function usage(): never {
@@ -41,20 +43,6 @@ function argValue(args: string[], name: string): string | undefined {
   const i = args.indexOf(name);
   if (i < 0) return undefined;
   return args[i + 1];
-}
-
-function ghJson<T>(args: string[]): T {
-  const r = spawnSync("gh", args, { encoding: "utf8", maxBuffer: 20 * 1024 * 1024 });
-  if (r.status !== 0) {
-    throw new Error(`gh ${args.join(" ")} failed: ${r.stderr || r.stdout}`);
-  }
-  return JSON.parse(r.stdout) as T;
-}
-
-function ghText(args: string[]): string {
-  const r = spawnSync("gh", args, { encoding: "utf8", maxBuffer: 5 * 1024 * 1024 });
-  if (r.status !== 0) return "";
-  return r.stdout;
 }
 
 function truncate(s: string | null | undefined, n: number): string {
@@ -304,13 +292,24 @@ export function createSnapshot(opts: SnapshotOptions): string {
     let cloneDir = "";
     try {
       cloneDir = cloneRepoForSnapshot(repo, id);
-      const codebase = collectCodebaseFromDir(cloneDir, branch);
+      const headSha = resolveGitHeadSha(cloneDir);
+      const codebase = collectCodebaseFromDir(cloneDir, branch, { headSha });
+      assertNoTotalBudgetSkips(codebase);
       writeCodebaseIndex(outDir, codebase);
+      const truncated = codebase.files.filter((f) => f.truncated).length;
       console.log(
-        `  codebase: ${codebase.total_files} files, ${(codebase.total_bytes / 1024).toFixed(0)} KB text (skipped ${codebase.skipped.length})`,
+        `  codebase: ${codebase.total_files} files, ${(codebase.total_bytes / 1024).toFixed(0)} KB text` +
+          ` (skipped_non_text=${codebase.skipped.filter((s) => s.reason !== "total_budget").length}` +
+          (truncated ? `, truncated_files=${truncated}` : "") +
+          (headSha ? `, head=${headSha.slice(0, 8)}` : "") +
+          `)`,
       );
     } catch (e) {
-      console.warn(`  Codebase capture failed: ${(e as Error).message}`);
+      const msg = (e as Error).message;
+      console.warn(`  Codebase capture failed: ${msg}`);
+      if (msg.includes("SNAPSHOT_MAX_CODE_TOTAL_BYTES") || msg.includes("total_budget")) {
+        throw e;
+      }
       console.warn("  Snapshot saved without codebase_index.json — re-run without --no-clone.");
     } finally {
       if (cloneDir) cleanupClone(cloneDir);

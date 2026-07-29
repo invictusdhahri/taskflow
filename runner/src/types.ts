@@ -93,12 +93,16 @@ export interface CodebaseFile {
   path: string;
   size: number;
   content: string;
+  /** SHA-256 of file content (utf8). */
+  content_hash?: string;
   truncated?: boolean;
 }
 
 export interface CodebaseIndex {
   collected_at: string;
   branch: string;
+  /** git HEAD from clone when captured. */
+  head_sha?: string;
   total_files: number;
   total_bytes: number;
   skipped: Array<{ path: string; reason: string }>;
