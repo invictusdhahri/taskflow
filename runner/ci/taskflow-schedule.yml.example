@@ -15,14 +15,22 @@
 #   { "github-login": ["skill", "tags"] } map layered on top of the repo's real
 #   collaborators, so the planner can suggest a confident assignee.
 #
-# REQUIRED SECRETS — set once at the ORG (or account) level, not per repo, so
-# adding TaskFlow to a new repo never means minting a new token:
+# REQUIRED SECRETS:
 #   OPENROUTER_API_KEY       OpenRouter key for the plan/render/duplicate-check calls.
-#   TASKFLOW_APP_ID          The TaskFlow GitHub App's App ID.
-#   TASKFLOW_APP_PRIVATE_KEY The TaskFlow GitHub App's private key (.pem contents).
-# See runner/README.md#github-app-setup for how to register + install the App once
-# across every repo you want this on — the default GITHUB_TOKEN cannot write
-# Projects v2 fields on a user/org-owned board, which is why this exists at all.
+#   TASKFLOW_PROJECTS_TOKEN  A classic PAT with `repo` + `project` scope, used as
+#                            GH_TOKEN for the whole job.
+#
+# Why a PAT and not the TaskFlow GitHub App: the default Actions GITHUB_TOKEN
+# can't write Projects v2 fields at all, and — confirmed the hard way — a
+# GitHub App's installation token can't reach Projects v2 boards owned by a
+# personal (non-org) account either, even with Projects permission granted.
+# GitHub Apps only get real Projects v2 access on ORGANIZATION-owned boards
+# (via "Organization permissions → Projects"). If your target repo's Project
+# is org-owned, the App approach genuinely works — see
+# runner/README.md#authentication-pat-vs-github-app for that path and swap the token step
+# below for actions/create-github-app-token. If it's owned by a personal
+# account (as most solo setups are), use the PAT as shown here — set once at
+# the account level (or per repo), no per-project caveats.
 
 name: TaskFlow schedule
 
@@ -38,18 +46,9 @@ jobs:
   plan-and-apply:
     runs-on: ubuntu-latest
     env:
+      GH_TOKEN: ${{ secrets.TASKFLOW_PROJECTS_TOKEN }}
       OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
     steps:
-      - name: Generate TaskFlow App token
-        id: app-token
-        uses: actions/create-github-app-token@v1
-        with:
-          app-id: ${{ secrets.TASKFLOW_APP_ID }}
-          private-key: ${{ secrets.TASKFLOW_APP_PRIVATE_KEY }}
-
-      - name: Export GH_TOKEN for the rest of this job
-        run: echo "GH_TOKEN=${{ steps.app-token.outputs.token }}" >> "$GITHUB_ENV"
-
       - name: Checkout this repo
         uses: actions/checkout@v4
 

@@ -66,29 +66,32 @@ All three clean → `Status=Ready`, assigned. Anything short of that → `Status
 
 At plan/apply time this is layered on top of the repo's real, live collaborators (`gh api repos/OWNER/REPO/collaborators`) — you only maintain the skill tags, not the roster itself. Untagged collaborators are still valid assignees, just without a skill hint. Use `--roster PATH` on `plan`/`apply` to override with a local file (skips the live fetch).
 
-**Scheduling:** copy [`ci/taskflow-schedule.yml.example`](ci/taskflow-schedule.yml.example) into `<target-repo>/.github/workflows/`. It authenticates as the TaskFlow GitHub App — see [GitHub App setup](#github-app-setup) below for the one-time (account-wide, not per-repo) setup — plus the `OPENROUTER_API_KEY` secret. See the file's header comments for the full precondition and deployment notes.
+**Scheduling:** copy [`ci/taskflow-schedule.yml.example`](ci/taskflow-schedule.yml.example) into `<target-repo>/.github/workflows/`. It needs a `TASKFLOW_PROJECTS_TOKEN` secret plus `OPENROUTER_API_KEY` — see [Authentication](#authentication-pat-vs-github-app) below for which one to use and why. See the file's header comments for the full precondition and deployment notes.
 
 Other `apply` flags: `--max-creates N` (default 5, caps issues created per run), `--project-owner`/`--project-number` (disambiguate when a repo has more than one linked Project), `--model`, `--max-usd` (per-call soft cost cap, default `TASKFLOW_MAX_USD_PER_RUN` / $0.40 — `apply` makes one render call per `CREATE_ISSUE` plus one batched duplicate-check call, a smaller cost profile than `plan`'s full-codebase budget).
 
-## GitHub App setup
+## Authentication (PAT vs GitHub App)
 
-One-time setup — done once for your whole account/org, not per repo. After this, adding TaskFlow to a new repo is just "bootstrap its board, copy a workflow file in" — no new secrets, no new token.
+The default Actions `GITHUB_TOKEN` can't write Projects v2 fields at all, so this always needs a separate token. There are two options — **use the PAT unless your Project boards are organization-owned.**
 
-1. **Register the App.** GitHub → your avatar → **Settings** → **Developer settings** → **GitHub Apps** → **New GitHub App**. (Registering under an organization instead: that org's **Settings** → **Developer settings** → **GitHub Apps** → **New GitHub App** — do this if you want org-wide secret storage in step 5.)
-   - **GitHub App name:** anything unique, e.g. `taskflow-bot-yourname`.
-   - **Homepage URL:** anything — not used functionally.
-   - **Webhook:** uncheck **Active** — TaskFlow runs on a schedule, it doesn't need webhook events.
-   - **Repository permissions:** `Issues` → Read and write. `Metadata` is auto-selected read-only.
-   - **Organization permissions** (org-registered Apps only): `Projects` → Read and write. (Personal-account Apps: Projects access comes from the repos you install it on — no separate toggle.)
-   - **Where can this GitHub App be installed?** → "Only on this account" unless you have a reason to make it public.
-   - **Create GitHub App**.
-2. **Generate its private key.** On the App's settings page → **Private keys** → **Generate a private key**. Downloads a `.pem` file — this is the App's credential, keep it safe.
-3. **Note the App ID.** Same page, near the top.
-4. **Install the App.** Left sidebar → **Install App** → pick your account/org → **Only select repositories** → choose every repo you want TaskFlow on now. Add more later from this same screen when you add a new repo — this step doesn't need repeating for repos already selected.
-5. **Store the two secrets.**
-   - **Organization:** Org **Settings** → **Secrets and variables** → **Actions** → **New organization secret**, repository access set to the repos you installed the App on (or all). Add `TASKFLOW_APP_ID` (from step 3) and `TASKFLOW_APP_PRIVATE_KEY` (the full `.pem` contents from step 2), plus `OPENROUTER_API_KEY`.
-   - **Personal account (no org):** GitHub doesn't offer account-wide Actions secrets outside an organization — add the same 3 secrets to each repo's own **Settings** → **Secrets and variables** → **Actions** once. The App *install* in step 4 is still one-time/account-wide either way; only secret *storage* is per-repo without an org.
-6. **Use it.** Copy `ci/taskflow-schedule.yml.example` (or `ci/taskflow-cross-repo.yml.example`) into a repo's `.github/workflows/` as-is — it already reads these three secret names. Bootstrap that repo's Project board once via the interactive skill (still required — this can't be automated away), commit and push, then trigger it once by hand (Actions tab → the workflow → **Run workflow**) before waiting for the schedule.
+**PAT (default, works everywhere):**
+
+1. GitHub → your avatar → **Settings** → **Developer settings** → **Personal access tokens** → **Tokens (classic)** → **Generate new token (classic)**.
+2. Scopes: check `repo` and `project`.
+3. Generate, copy it.
+4. Add it as a secret named `TASKFLOW_PROJECTS_TOKEN` on the target repo (**Settings → Secrets and variables → Actions**), alongside `OPENROUTER_API_KEY`.
+5. Copy `ci/taskflow-schedule.yml.example` (or `ci/taskflow-cross-repo.yml.example`) into that repo's `.github/workflows/` as-is — it already reads both secret names. Bootstrap the repo's Project board once via the interactive skill (still required — this can't be automated away), commit and push, then trigger it once by hand (Actions tab → the workflow → **Run workflow**) before waiting for the schedule.
+
+**GitHub App (only if every target repo's Project board is organization-owned):** confirmed the hard way that a GitHub App's installation token cannot read or write Projects v2 boards owned by a *personal* account — even with `Projects: Read and write` granted, `gh project view` resolves to nothing. GitHub Apps only get real Projects v2 access on **organization-owned** boards, via `Organization permissions → Projects`. If that's your situation, the App is genuinely nicer (install once across many org repos, no PAT to distribute):
+
+1. **Register the App**, under the **organization's** Settings → Developer settings → GitHub Apps → New GitHub App (must be org-registered, not personal, for this to work).
+   - **Repository permissions:** `Issues` → Read and write, `Contents` → Read-only, `Pull requests` → Read-only. `Metadata` is auto-selected.
+   - **Organization permissions:** `Projects` → Read and write.
+   - **Webhook:** uncheck **Active** — not needed for a scheduled workflow.
+2. **Generate its private key** (Private keys → Generate a private key → downloads a `.pem`) and **note the App ID** (top of the same page).
+3. **Install the App** on every repo you want TaskFlow running on (Install App in the sidebar → Only select repositories).
+4. **Store secrets** as org-level Actions secrets: `TASKFLOW_APP_ID`, `TASKFLOW_APP_PRIVATE_KEY` (full `.pem` contents), `OPENROUTER_API_KEY`.
+5. In the workflow template, replace the `GH_TOKEN: ${{ secrets.TASKFLOW_PROJECTS_TOKEN }}` job-level env with an `actions/create-github-app-token@v1` step (`app-id`/`private-key` from the secrets above) that exports its output token into `GH_TOKEN` via `$GITHUB_ENV` before the rest of the job runs.
 
 ## Cross-repo joint planning
 
@@ -110,7 +113,7 @@ These are the files that actually define a repo's public interface — sent in f
 
 Every operation in a group plan's output carries a `"repo"` field saying which member it targets; `pnpm apply` on a group plan validates every `CREATE_ISSUE`'s `repo` against the declared group (fails fast on an unrecognized one) and routes creation/duplicate-checking/assignment to each op's own target repo. Project resolution stays a single shared board — that part already worked across repos before this feature existed.
 
-Scheduling: copy [`ci/taskflow-cross-repo.yml.example`](ci/taskflow-cross-repo.yml.example) — it can live in either member repo (or neither), since the TaskFlow App token already has access across every repo it's installed on (make sure the App from [GitHub App setup](#github-app-setup) is installed on *every* member repo in the group).
+Scheduling: copy [`ci/taskflow-cross-repo.yml.example`](ci/taskflow-cross-repo.yml.example) — it can live in either member repo (or neither), since the PAT already has access across every repo you granted it (see [Authentication](#authentication-pat-vs-github-app) — same PAT-vs-App tradeoff as the single-repo case, and the PAT/App must cover *every* member repo in the group).
 
 ## Skip if unchanged
 

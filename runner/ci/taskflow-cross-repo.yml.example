@@ -10,9 +10,8 @@
 # cost small. See runner/README.md for the full design and cost breakdown.
 #
 # This workflow can live in EITHER member repo, or neither — it works from
-# wherever it runs because the TaskFlow App token below already has read/write
-# access across every repo it's installed on, unlike the default per-repo
-# GITHUB_TOKEN. The App must be installed on EVERY repo in the group.
+# wherever it runs because the PAT below already has read/write access across
+# every repo you granted it, unlike the default per-repo GITHUB_TOKEN.
 #
 # PRECONDITION (apply.ts fails fast otherwise, it never auto-provisions a board):
 #   Every member repo — or at least one shared Project you point --project-owner/
@@ -25,11 +24,18 @@
 # declaring which of its own files define its public interface — those are sent
 # in full to the joint merge call; everything else only as condensed findings.
 #
-# REQUIRED SECRETS — same org-level App secrets as the single-repo template:
-#   OPENROUTER_API_KEY       OpenRouter key for the plan/render/duplicate-check calls.
-#   TASKFLOW_APP_ID          The TaskFlow GitHub App's App ID.
-#   TASKFLOW_APP_PRIVATE_KEY The TaskFlow GitHub App's private key (.pem contents).
-# See runner/README.md#github-app-setup.
+# REQUIRED SECRETS:
+#   OPENROUTER_API_KEY      OpenRouter key for the plan/render/duplicate-check calls.
+#   TASKFLOW_PROJECTS_TOKEN A classic PAT with `repo` + `project` scope, covering
+#                           every repo in the group, used as GH_TOKEN for the job.
+#
+# Why a PAT and not the TaskFlow GitHub App: confirmed the hard way that a
+# GitHub App's installation token can't reach Projects v2 boards owned by a
+# personal (non-org) account, even with Projects permission granted — only
+# organization-owned boards actually work with an App token. If every repo in
+# your group and its shared Project are org-owned, the App approach works —
+# see runner/README.md#authentication-pat-vs-github-app and swap the token step below for
+# actions/create-github-app-token.
 
 name: TaskFlow cross-repo
 
@@ -50,6 +56,7 @@ jobs:
   plan-and-apply:
     runs-on: ubuntu-latest
     env:
+      GH_TOKEN: ${{ secrets.TASKFLOW_PROJECTS_TOKEN }}
       OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
     steps:
       - name: Resolve group repos
@@ -58,16 +65,6 @@ jobs:
           REPOS="${{ github.event.inputs.repos }}"
           if [ -z "$REPOS" ]; then REPOS="$TASKFLOW_GROUP_REPOS"; fi
           echo "repos=$REPOS" >> "$GITHUB_OUTPUT"
-
-      - name: Generate TaskFlow App token
-        id: app-token
-        uses: actions/create-github-app-token@v1
-        with:
-          app-id: ${{ secrets.TASKFLOW_APP_ID }}
-          private-key: ${{ secrets.TASKFLOW_APP_PRIVATE_KEY }}
-
-      - name: Export GH_TOKEN for the rest of this job
-        run: echo "GH_TOKEN=${{ steps.app-token.outputs.token }}" >> "$GITHUB_ENV"
 
       - name: Checkout taskflow runner
         uses: actions/checkout@v4
