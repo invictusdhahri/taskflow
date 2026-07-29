@@ -125,6 +125,8 @@ export interface FixturePack {
 export interface PlanOperation {
   id: string;
   type: OpType;
+  /** Which repo this op targets — only set/used for multi-repo group plans. */
+  repo?: string;
   target?: string;
   title?: string;
   reason?: string;
@@ -133,6 +135,18 @@ export interface PlanOperation {
   has_caveman?: boolean;
   has_files?: boolean;
   has_ac?: boolean;
+  /** Remaining Definition of Ready signals (templates.md) — model self-reported hints, not authoritative. */
+  has_outcome?: boolean;
+  has_scope?: boolean;
+  has_test_plan?: boolean;
+  has_dependencies?: boolean;
+  has_nfr_docs_rollout?: boolean;
+  no_open_decision?: boolean;
+  fits_two_weeks?: boolean;
+  /** Roster-matched assignee suggestion for CREATE_ISSUE, only when a clear skill-tag overlap exists. */
+  suggested_assignee?: string;
+  assignee_confidence?: "confident" | "uncertain";
+  assignee_reason?: string;
 }
 
 export interface BenchPlan {

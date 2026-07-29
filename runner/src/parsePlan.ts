@@ -45,9 +45,15 @@ function optionalBool(value: unknown): boolean | undefined {
   return undefined;
 }
 
+/** Unrecognized values become undefined rather than failing the whole plan — this is a soft hint field. */
+function optionalConfidence(value: unknown): "confident" | "uncertain" | undefined {
+  return value === "confident" || value === "uncertain" ? value : undefined;
+}
+
 const OpSchema = z.object({
   id: z.string(),
   type: z.enum(OP_TYPES),
+  repo: z.preprocess(optionalString, z.string().optional()),
   target: z.preprocess(optionalString, z.string().optional()),
   title: z.preprocess(optionalString, z.string().optional()),
   reason: z.preprocess(optionalString, z.string().optional()),
@@ -56,6 +62,19 @@ const OpSchema = z.object({
   has_caveman: z.preprocess(optionalBool, z.boolean().optional()),
   has_files: z.preprocess(optionalBool, z.boolean().optional()),
   has_ac: z.preprocess(optionalBool, z.boolean().optional()),
+  has_outcome: z.preprocess(optionalBool, z.boolean().optional()),
+  has_scope: z.preprocess(optionalBool, z.boolean().optional()),
+  has_test_plan: z.preprocess(optionalBool, z.boolean().optional()),
+  has_dependencies: z.preprocess(optionalBool, z.boolean().optional()),
+  has_nfr_docs_rollout: z.preprocess(optionalBool, z.boolean().optional()),
+  no_open_decision: z.preprocess(optionalBool, z.boolean().optional()),
+  fits_two_weeks: z.preprocess(optionalBool, z.boolean().optional()),
+  suggested_assignee: z.preprocess(optionalString, z.string().optional()),
+  assignee_confidence: z.preprocess(
+    optionalConfidence,
+    z.enum(["confident", "uncertain"]).optional(),
+  ),
+  assignee_reason: z.preprocess(optionalString, z.string().optional()),
 });
 
 const PlanSchema = z.object({
