@@ -18,8 +18,9 @@ function readJson<T>(path: string, fallback: T): T {
 }
 
 export function loadFixtureDir(dir: string): FixturePack {
+  const dirName = dir.split(/[/\\]/).pop() || "unknown";
   const meta = readJson<FixtureMeta>(join(dir, "meta.json"), {
-    id: "unknown",
+    id: dirName,
     kind: "synthetic",
     mode: 3,
     band: "M",
@@ -43,7 +44,7 @@ export function loadFixtureDir(dir: string): FixturePack {
 
   return {
     dir,
-    meta: { ...meta, id: meta.id || dir.split(/[/\\]/).pop() || "unknown" },
+    meta: { ...meta, id: meta.id && meta.id !== "unknown" ? meta.id : dirName },
     issues,
     project,
     pulls,

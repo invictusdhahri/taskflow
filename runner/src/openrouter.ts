@@ -40,9 +40,19 @@ export function defaultMaxUsdPerRun(): number {
   return Number(process.env.TASKFLOW_MAX_USD_PER_RUN ?? 0.4);
 }
 
+/** Higher default for full-codebase `pnpm plan` runs. */
+export function defaultPlanMaxUsd(): number {
+  return Number(process.env.TASKFLOW_PLAN_MAX_USD ?? 2.0);
+}
+
 /** Per-attempt HTTP timeout (SDK default is 10 minutes). */
 export function openRouterTimeoutMs(): number {
   return Number(process.env.OPENROUTER_TIMEOUT_MS ?? 120_000);
+}
+
+/** Longer default for large plan prompts when env unset — callers may set OPENROUTER_TIMEOUT_MS. */
+export function openRouterPlanTimeoutMs(): number {
+  return Number(process.env.OPENROUTER_TIMEOUT_MS ?? 300_000);
 }
 
 export function openRouterMaxRetries(): number {
