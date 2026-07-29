@@ -62,9 +62,12 @@ jobs:
           ref: main
           path: .taskflow-runner
 
+      # Reads the pnpm version from the RUNNER's own package.json, not the
+      # target repo's — pnpm/action-setup scans the workspace root by default,
+      # which would collide with a target repo that pins its own pnpm version.
       - uses: pnpm/action-setup@v4
         with:
-          version: 9
+          package_json_file: .taskflow-runner/runner/package.json
 
       - uses: actions/setup-node@v4
         with:

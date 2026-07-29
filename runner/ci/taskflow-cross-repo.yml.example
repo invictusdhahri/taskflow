@@ -78,9 +78,11 @@ jobs:
           ref: main
           path: .taskflow-runner
 
+      # Reads the pnpm version from the RUNNER's own package.json — see the
+      # single-repo template's comment for why this can't just be hardcoded.
       - uses: pnpm/action-setup@v4
         with:
-          version: 9
+          package_json_file: .taskflow-runner/runner/package.json
 
       - uses: actions/setup-node@v4
         with:
