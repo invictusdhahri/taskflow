@@ -351,27 +351,41 @@ async function main(): Promise<void> {
     );
 
     const rendered = new Map<string, string>();
+    const renderFailed = new Set<string>();
     for (const op of capped) {
       const ctx = getRepoContext(targetRepoByOp.get(op.id)!);
       const marker = `<!-- taskflow:${snapshotId}:${op.id} -->`;
       const evidence = JSON.stringify({ title: op.title, reason: op.reason }, null, 2);
-      const body = await renderIssueBody({
-        model,
-        fallbackModel,
-        skill,
-        op,
-        evidence,
-        roster: ctx.roster,
-        marker,
-        maxUsd,
-      });
-      rendered.set(op.id, body);
+      try {
+        const body = await renderIssueBody({
+          model,
+          fallbackModel,
+          skill,
+          op,
+          evidence,
+          roster: ctx.roster,
+          marker,
+          maxUsd,
+        });
+        rendered.set(op.id, body);
+      } catch (e) {
+        // Never fall through to creating an issue with no real body — skip this
+        // op instead (rest of the batch still proceeds).
+        renderFailed.add(op.id);
+        console.warn(`  [render] ${op.id} skipped: ${(e as Error).message}`);
+        results.push({
+          op_id: op.id,
+          title: op.title,
+          action: `skipped (render failed: ${(e as Error).message})`,
+        });
+      }
     }
+    const renderableOps = capped.filter((op) => !renderFailed.has(op.id));
 
     // Duplicate-check is batched per target repo (one call per repo, not per op),
     // since it needs to compare against that repo's own open issues.
     const opsByRepo = new Map<string, PlanOperation[]>();
-    for (const op of capped) {
+    for (const op of renderableOps) {
       const targetRepo = targetRepoByOp.get(op.id)!;
       const list = opsByRepo.get(targetRepo) ?? [];
       list.push(op);
@@ -394,10 +408,10 @@ async function main(): Promise<void> {
       for (const d of dupResults) dupById.set(d.op_id, d);
     }
 
-    for (const op of capped) {
+    for (const op of renderableOps) {
       const targetRepo = targetRepoByOp.get(op.id)!;
       const ctx = getRepoContext(targetRepo);
-      const body = rendered.get(op.id) ?? "";
+      const body = rendered.get(op.id)!;
       const dor = checkDefinitionOfReady(body);
       const dup = dupById.get(op.id);
       const duplicateClean = Boolean(dup?.checked && !dup.duplicate);

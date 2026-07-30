@@ -8,6 +8,16 @@ Follow Template A from the skill's templates.md exactly — same section heading
 
 Return ONLY the raw markdown body (no JSON, no code fences, no commentary before or after it). The very first line must be the idempotency marker given below, verbatim.`;
 
+/**
+ * The idempotency marker is an HTML comment, which GitHub renders as invisible —
+ * a body that is just the marker (empty/refused/truncated completion) looks like
+ * "No description provided." on the issue page even though `body` is non-empty.
+ * Strip comments before judging whether there's anything a human would actually see.
+ */
+function visibleContentLength(raw: string): number {
+  return raw.replace(/<!--[\s\S]*?-->/g, "").trim().length;
+}
+
 /** Renders the actual Template A markdown body for one CREATE_ISSUE op, via one OpenRouter call. */
 export async function renderIssueBody(opts: {
   model: ModelConfig;
@@ -40,6 +50,12 @@ ${JSON.stringify(roster, null, 2)}
 ${evidence}`;
 
   const usage = await completePlan({ model, fallbackModel, system, user, maxUsdPerRun: maxUsd });
-  const body = usage.raw_text.trim();
-  return body.startsWith(marker) ? body : `${marker}\n\n${body}`;
+  const raw = usage.raw_text.trim();
+  if (visibleContentLength(raw) < 20) {
+    throw new Error(
+      `${model.slug} (routed ${usage.model_used}) returned a blank/near-blank issue body for ${op.id} — refusing to create an issue with no visible description`,
+    );
+  }
+  const body = raw.startsWith(marker) ? raw : `${marker}\n\n${raw}`;
+  return body;
 }
