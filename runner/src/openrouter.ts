@@ -225,7 +225,9 @@ async function attemptCompletion(opts: {
 
   const usd = estimateUsd(model, input_tokens, output_tokens);
   const model_used = completion.model ?? model.slug;
-  const finish = completion.choices[0]?.finish_reason ?? "?";
+  // Cast to string: OpenRouter can surface provider-side failures as
+  // finish_reason "error", a value outside the OpenAI SDK's own literal union.
+  const finish = (completion.choices[0]?.finish_reason as string | undefined) ?? "?";
 
   console.log(
     `  [api] ok ${latency_ms}ms routed=${model_used} finish=${finish} ` +
@@ -236,6 +238,18 @@ async function attemptCompletion(opts: {
   if (finish === "length") {
     console.warn(
       `  [api] truncated at max_tokens=${maxTokens} — plan may be incomplete`,
+    );
+  }
+
+  // A non-throwing HTTP 200 with an empty/error completion (provider-side
+  // failure, content filter, etc.) looks identical to success to the SDK —
+  // nothing throws, so completePlan's catch-and-fallback never triggers on
+  // its own. Surface it as a thrown error here so the caller's fallback
+  // model actually gets a chance to run instead of downstream JSON/body
+  // parsing failing on an empty string.
+  if (finish === "error" || raw_text.trim().length === 0) {
+    throw new Error(
+      `${model.slug} returned an empty completion (finish=${finish}, charsOut=${raw_text.length})`,
     );
   }
 
