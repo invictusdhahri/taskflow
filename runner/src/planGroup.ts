@@ -51,6 +51,7 @@ export async function runGroupPlan(opts: {
   packs: FixturePack[];
   repos: string[];
   model: ModelConfig;
+  fallbackModel?: ModelConfig;
   skill: string;
   maxUsd: number;
   rosterByRepo?: Record<string, RosterEntry[]>;
@@ -58,7 +59,8 @@ export async function runGroupPlan(opts: {
   writeCache: boolean;
   dryRun?: boolean;
 }): Promise<GroupPlanRunResult | { dryRun: true; preview: Record<string, unknown> }> {
-  const { packs, repos, model, skill, maxUsd, rosterByRepo, readCache, writeCache, dryRun } = opts;
+  const { packs, repos, model, fallbackModel, skill, maxUsd, rosterByRepo, readCache, writeCache, dryRun } =
+    opts;
   if (packs.length !== repos.length) {
     throw new Error("runGroupPlan: packs and repos must have matching length/order");
   }
@@ -131,7 +133,14 @@ export async function runGroupPlan(opts: {
     const cache = readCache ? loadFindingsCache(repo, model.id, skill) : null;
 
     console.log(`  [group-plan] ${repo}: reanalyze=${diff.reanalyze.length} reuse=${diff.cache_hits}`);
-    const analyzed = await analyzeFileChunks({ model, system, pack, files: diff.reanalyze, maxUsd });
+    const analyzed = await analyzeFileChunks({
+      model,
+      fallbackModel,
+      system,
+      pack,
+      files: diff.reanalyze,
+      maxUsd,
+    });
     usd += analyzed.usd;
     input_tokens += analyzed.input_tokens;
     output_tokens += analyzed.output_tokens;
@@ -178,7 +187,7 @@ export async function runGroupPlan(opts: {
   const user = `${GROUP_MERGE_JSON_INSTRUCTIONS}\n\n## Payload\n\`\`\`json\n${JSON.stringify(payload, null, 2)}\n\`\`\``;
 
   console.log(`  [group-plan] joint merge repos=${repos.join(",")} chars≈${user.length}`);
-  const usage = await completePlan({ model, system, user, maxUsdPerRun: maxUsd });
+  const usage = await completePlan({ model, fallbackModel, system, user, maxUsdPerRun: maxUsd });
   raw_texts.push(usage.raw_text);
   usd += usage.usd;
   input_tokens += usage.input_tokens;

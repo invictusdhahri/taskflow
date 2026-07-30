@@ -17,7 +17,7 @@ import { checkDefinitionOfReady, type DorResult } from "./dor.js";
 import { checkDuplicates, type DupCheckResult, type OpenIssueForDupCheck } from "./dupCheck.js";
 import { ghJson, ghRun } from "./gh.js";
 import { loadSkillContext, runnerRoot } from "./loadSkill.js";
-import { DEFAULT_MODEL, getModelById } from "./models.js";
+import { DEFAULT_MODEL, getFallbackModel, getModelById } from "./models.js";
 import { defaultMaxUsdPerRun } from "./openrouter.js";
 import { renderIssueBody } from "./renderBody.js";
 import { buildRoster, type RosterEntry } from "./roster.js";
@@ -274,6 +274,7 @@ async function main(): Promise<void> {
         throw new Error(`Unknown model: ${modelArg}`);
       })())
     : DEFAULT_MODEL;
+  const fallbackModel = getFallbackModel(model);
 
   const planFile = JSON.parse(readFileSync(planPath, "utf8")) as PlanFile;
   const repoList: string[] = planFile.meta.repos?.length
@@ -354,7 +355,16 @@ async function main(): Promise<void> {
       const ctx = getRepoContext(targetRepoByOp.get(op.id)!);
       const marker = `<!-- taskflow:${snapshotId}:${op.id} -->`;
       const evidence = JSON.stringify({ title: op.title, reason: op.reason }, null, 2);
-      const body = await renderIssueBody({ model, skill, op, evidence, roster: ctx.roster, marker, maxUsd });
+      const body = await renderIssueBody({
+        model,
+        fallbackModel,
+        skill,
+        op,
+        evidence,
+        roster: ctx.roster,
+        marker,
+        maxUsd,
+      });
       rendered.set(op.id, body);
     }
 
@@ -372,6 +382,7 @@ async function main(): Promise<void> {
       const ctx = getRepoContext(targetRepo);
       const dupResults = await checkDuplicates({
         model,
+        fallbackModel,
         openIssues: ctx.openIssues,
         candidates: ops.map((op) => ({
           op_id: op.id,

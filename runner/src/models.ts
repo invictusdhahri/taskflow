@@ -26,6 +26,16 @@ const GEMINI_PRO: ModelConfig = {
 export const DEFAULT_MODEL_ID = "gemini-pro";
 export const DEFAULT_MODEL: ModelConfig = GEMINI_PRO;
 
+/**
+ * Automatic runtime fallback when the requested model's OpenRouter call fails
+ * outright (timeout, 5xx, provider error) even after its own retries — not a
+ * quality choice like --model, a resilience one. Falls back to Flash unless
+ * the requested model already is Flash (nothing cheaper to fall back to).
+ */
+export function getFallbackModel(model: ModelConfig): ModelConfig | undefined {
+  return model.id === GEMINI_FLASH.id ? undefined : GEMINI_FLASH;
+}
+
 /** Optional models for offline bench comparisons only — not used by `pnpm plan`. */
 export const BENCH_MODELS: ModelConfig[] = [
   GEMINI_FLASH,

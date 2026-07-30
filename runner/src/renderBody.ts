@@ -11,6 +11,7 @@ Return ONLY the raw markdown body (no JSON, no code fences, no commentary before
 /** Renders the actual Template A markdown body for one CREATE_ISSUE op, via one OpenRouter call. */
 export async function renderIssueBody(opts: {
   model: ModelConfig;
+  fallbackModel?: ModelConfig;
   skill: string;
   op: PlanOperation;
   /** JSON-stringified github/codebase context relevant to this op. */
@@ -19,7 +20,7 @@ export async function renderIssueBody(opts: {
   marker: string;
   maxUsd: number;
 }): Promise<string> {
-  const { model, skill, op, evidence, roster, marker, maxUsd } = opts;
+  const { model, fallbackModel, skill, op, evidence, roster, marker, maxUsd } = opts;
   const system = `You follow TaskFlow skill rules.\n\n${skill}`;
   const user = `${RENDER_INSTRUCTIONS}
 
@@ -38,7 +39,7 @@ ${JSON.stringify(roster, null, 2)}
 ## Evidence
 ${evidence}`;
 
-  const usage = await completePlan({ model, system, user, maxUsdPerRun: maxUsd });
+  const usage = await completePlan({ model, fallbackModel, system, user, maxUsdPerRun: maxUsd });
   const body = usage.raw_text.trim();
   return body.startsWith(marker) ? body : `${marker}\n\n${body}`;
 }

@@ -112,6 +112,36 @@ export async function completePlan(opts: {
   system: string;
   user: string;
   maxUsdPerRun?: number;
+  /**
+   * Tried once, in-process, if the primary model call fails outright (timeout,
+   * 5xx, provider error) even after its own SDK retries. Not used when the
+   * primary call merely produces a bad/unparseable response — only on a thrown
+   * error from the request itself. Pass via models.ts's getFallbackModel().
+   */
+  fallbackModel?: ModelConfig;
+}): Promise<ChatUsage> {
+  const { fallbackModel } = opts;
+  try {
+    return await attemptCompletion(opts);
+  } catch (e) {
+    if (!fallbackModel || fallbackModel.slug === opts.model.slug) throw e;
+    console.warn(
+      `  [api] ${opts.model.slug} failed (${(e as Error).message}); falling back to ${fallbackModel.slug}`,
+    );
+    return await attemptCompletion({
+      model: fallbackModel,
+      system: opts.system,
+      user: opts.user,
+      maxUsdPerRun: opts.maxUsdPerRun,
+    });
+  }
+}
+
+async function attemptCompletion(opts: {
+  model: ModelConfig;
+  system: string;
+  user: string;
+  maxUsdPerRun?: number;
 }): Promise<ChatUsage> {
   const { model, system, user } = opts;
   const maxUsd = opts.maxUsdPerRun ?? defaultMaxUsdPerRun();

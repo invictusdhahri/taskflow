@@ -88,6 +88,7 @@ function fillMissingFindings(
 
 export async function analyzeFileChunks(opts: {
   model: ModelConfig;
+  fallbackModel?: ModelConfig;
   system: string;
   pack: FixturePack;
   files: CodebaseFile[];
@@ -102,7 +103,7 @@ export async function analyzeFileChunks(opts: {
   model_used: string;
   raw_texts: string[];
 }> {
-  const { model, system, pack, files, maxUsd } = opts;
+  const { model, fallbackModel, system, pack, files, maxUsd } = opts;
   if (!files.length) {
     return {
       fresh: [],
@@ -145,7 +146,7 @@ export async function analyzeFileChunks(opts: {
     console.log(
       `  [findings] chunk ${i + 1}/${chunks.length} files=${chunk.length} chars≈${user.length}`,
     );
-    const usage = await completePlan({ model, system, user, maxUsdPerRun: maxUsd });
+    const usage = await completePlan({ model, fallbackModel, system, user, maxUsdPerRun: maxUsd });
     raw_texts.push(usage.raw_text);
     usd += usage.usd;
     input_tokens += usage.input_tokens;
@@ -170,6 +171,7 @@ export async function analyzeFileChunks(opts: {
 
 async function mergeToPlan(opts: {
   model: ModelConfig;
+  fallbackModel?: ModelConfig;
   system: string;
   pack: FixturePack;
   findings: Array<{ path: string; findings: FileFindingPayload }>;
@@ -185,6 +187,7 @@ async function mergeToPlan(opts: {
   console.log(`  [merge] findings=${opts.findings.length} chars≈${user.length}`);
   const usage = await completePlan({
     model: opts.model,
+    fallbackModel: opts.fallbackModel,
     system: opts.system,
     user,
     maxUsdPerRun: opts.maxUsd,
@@ -200,6 +203,7 @@ async function mergeToPlan(opts: {
 export async function runFullCodebasePlan(opts: {
   pack: FixturePack;
   model: ModelConfig;
+  fallbackModel?: ModelConfig;
   skill: string;
   maxUsd: number;
   /** Load findings cache for incremental reuse. */
@@ -210,7 +214,7 @@ export async function runFullCodebasePlan(opts: {
   /** Live collaborators + skill tags, used to suggest assignees on CREATE_ISSUE. */
   roster?: RosterEntry[];
 }): Promise<PlanRunResult | { dryRun: true; preview: Record<string, unknown> }> {
-  const { pack, model, skill, maxUsd, readCache, writeCache, dryRun, roster } = opts;
+  const { pack, model, fallbackModel, skill, maxUsd, readCache, writeCache, dryRun, roster } = opts;
   const files = pack.codebase?.files;
   if (!files?.length) {
     throw new Error(
@@ -293,7 +297,7 @@ export async function runFullCodebasePlan(opts: {
       `  [plan] mode=single files=${files.length} chars=${fullEvidence.stats.chars} omitted=0`,
     );
     const user = `${PLAN_JSON_INSTRUCTIONS}\n\n## Frozen evidence\n\`\`\`json\n${fullEvidence.text}\n\`\`\``;
-    const usage = await completePlan({ model, system, user, maxUsdPerRun: maxUsd });
+    const usage = await completePlan({ model, fallbackModel, system, user, maxUsdPerRun: maxUsd });
     const plan = parsePlan(usage.raw_text);
 
     // Seed cache so next run can be incremental.
@@ -344,6 +348,7 @@ export async function runFullCodebasePlan(opts: {
 
   const analyzed = await analyzeFileChunks({
     model,
+    fallbackModel,
     system,
     pack,
     files: diff.reanalyze,
@@ -369,6 +374,7 @@ export async function runFullCodebasePlan(opts: {
 
   const merged = await mergeToPlan({
     model,
+    fallbackModel,
     system,
     pack,
     findings: allFindings,

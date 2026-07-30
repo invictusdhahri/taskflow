@@ -11,7 +11,7 @@ import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { getFixtureById, loadFixtureDir } from "./fixtures.js";
 import { loadSkillContext, runnerRoot } from "./loadSkill.js";
-import { DEFAULT_MODEL, getModelById } from "./models.js";
+import { DEFAULT_MODEL, getFallbackModel, getModelById } from "./models.js";
 import { defaultPlanMaxUsd } from "./openrouter.js";
 import { runFullCodebasePlan } from "./planCodebase.js";
 import { runGroupPlan } from "./planGroup.js";
@@ -107,6 +107,7 @@ async function runGroup(args: string[], reposArg: string): Promise<void> {
         throw new Error(`Unknown model: ${modelArg}`);
       })())
     : DEFAULT_MODEL;
+  const fallbackModel = getFallbackModel(model);
 
   if (skipIfUnchanged && groupUnchanged(groupId, repos)) {
     console.log(`\n[skip] group ${groupId}: no member repo has moved since the last successful joint run.`);
@@ -146,6 +147,7 @@ async function runGroup(args: string[], reposArg: string): Promise<void> {
     packs,
     repos,
     model,
+    fallbackModel,
     skill,
     maxUsd,
     rosterByRepo,
@@ -243,6 +245,7 @@ async function runSingle(args: string[]): Promise<void> {
         throw new Error(`Unknown model: ${modelArg}`);
       })())
     : DEFAULT_MODEL;
+  const fallbackModel = getFallbackModel(model);
 
   const skill = loadSkillContext();
 
@@ -308,6 +311,7 @@ async function runSingle(args: string[]): Promise<void> {
   const result = await runFullCodebasePlan({
     pack,
     model,
+    fallbackModel,
     skill,
     maxUsd,
     readCache,

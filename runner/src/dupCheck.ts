@@ -35,11 +35,12 @@ One entry per candidate op_id. Omit duplicate_of when duplicate is false. No mar
 /** One batched OpenRouter call: proposed candidates vs. freshly-fetched open issues. */
 export async function checkDuplicates(opts: {
   model: ModelConfig;
+  fallbackModel?: ModelConfig;
   openIssues: OpenIssueForDupCheck[];
   candidates: DupCandidate[];
   maxUsd: number;
 }): Promise<DupCheckResult[]> {
-  const { model, openIssues, candidates, maxUsd } = opts;
+  const { model, fallbackModel, openIssues, candidates, maxUsd } = opts;
   if (!candidates.length) return [];
 
   const unresolved = (reason: string): DupCheckResult[] =>
@@ -67,7 +68,7 @@ export async function checkDuplicates(opts: {
 
   let raw: string;
   try {
-    const usage = await completePlan({ model, system, user, maxUsdPerRun: maxUsd });
+    const usage = await completePlan({ model, fallbackModel, system, user, maxUsdPerRun: maxUsd });
     raw = usage.raw_text;
   } catch (e) {
     return unresolved(`duplicate check call failed: ${(e as Error).message}`);
