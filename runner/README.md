@@ -53,10 +53,11 @@ pnpm apply -- --plan results/plans/<id>.json --dry-run   # render + duplicate-ch
 **Per-issue gate — Status instead of a chat approval:** every `CREATE_ISSUE` is always created (low risk — it's just information landing on the board). What's gated is whether it lands on `Ready` (and gets assigned) or `Backlog` (unassigned, with a note):
 
 1. A **live duplicate check** against currently-open issues (not the frozen plan snapshot), using the same "compare intent, affected surface, acceptance criteria, and delivery state" standard as the interactive skill.
-2. The **Definition of Ready** checklist (`skills/taskflow/templates.md`), checked against the actual rendered issue body — not the model's self-reported `has_*` flags in the plan JSON, which are cheap hints only.
-3. A **confident roster match** for an assignee, re-verified against freshly-fetched collaborators at apply time (not the plan-time snapshot).
+2. An **intent-corroboration check** — CREATE_ISSUE proposals to restore/enable/fix code that looks intentionally disabled (commented out, hardcoded false, private/underscore-prefixed route, bare TODO) only pass when the plan cites corroborating evidence (`intent_confidence: "evidenced"`); code shape alone downgrades to Backlog with a note, so a human confirms it wasn't deliberately paused before it's promoted.
+3. The **Definition of Ready** checklist (`skills/taskflow/templates.md`), checked against the actual rendered issue body — not the model's self-reported `has_*` flags in the plan JSON, which are cheap hints only.
+4. A **confident roster match** for an assignee, re-verified against freshly-fetched collaborators at apply time (not the plan-time snapshot) — always fails when `--no-auto-assign` is set, the headless equivalent of choosing Manual in the interactive skill's roster step.
 
-All three clean → `Status=Ready`, assigned. Anything short of that → `Status=Backlog`, unassigned, with a one-line note on why. The board itself is the audit trail — filter by `Backlog` to see what needs a human look.
+All four clean → `Status=Ready`, assigned. Anything short of that → `Status=Backlog`, unassigned, with a one-line note on why. The board itself is the audit trail — filter by `Backlog` to see what needs a human look.
 
 **Roster / skill tags:** commit `.taskflow/roster.json` to the *target* repo (not this repo):
 
@@ -70,7 +71,7 @@ At plan/apply time this is layered on top of the repo's real, live collaborators
 
 **Project resolution:** by default, `apply` looks for a Project explicitly linked to the target repo and uses it automatically — no flags needed, works regardless of the board's title (an "untitled project" still counts if it's genuinely linked to that repo). If the repo has zero or more than one linked Project, it falls back to asking you to disambiguate. `--project-owner`/`--project-number` always take priority over auto-detection when passed — use them to pin a specific board (e.g. when a repo's own linked-Project state is ambiguous, or you want a board that isn't linked to the repo at all).
 
-Other `apply` flags: `--max-creates N` (default 5, caps issues created per run), `--model`, `--max-usd` (per-call soft cost cap, default `TASKFLOW_MAX_USD_PER_RUN` / $0.40 — `apply` makes one render call per `CREATE_ISSUE` plus one batched duplicate-check call, a smaller cost profile than `plan`'s full-codebase budget).
+Other `apply` flags: `--max-creates N` (default 5, caps issues created per run), `--model`, `--max-usd` (per-call soft cost cap, default `TASKFLOW_MAX_USD_PER_RUN` / $0.40 — `apply` makes one render call per `CREATE_ISSUE` plus one batched duplicate-check call, a smaller cost profile than `plan`'s full-codebase budget), `--no-auto-assign` (skip roster auto-assignment entirely; every created issue lands Backlog with a note, for teams that always want a human to assign).
 
 ## Authentication (PAT vs GitHub App)
 

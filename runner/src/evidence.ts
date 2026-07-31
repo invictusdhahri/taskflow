@@ -234,10 +234,16 @@ const DEPTH_OVER_COVERAGE = `DEPTH OVER COVERAGE — the most important instruct
 - For every finding, name the actual mechanism: the specific input, sequence, or state that triggers the problem, and what a user or the system would observe as a result. "This function is complex" is not a finding. "When X happens while Y is already true, this silently drops the update because Z" is.
 - Fewer, sharper findings beat more, shallow ones. Never pad output to fill space.`;
 
+const INTENT_VS_CODE_SHAPE = `CODE SHAPE IS NOT PROOF OF INTENT — before proposing to restore, wire up, enable, or fix code that looks disabled (commented out, a hardcoded false/disabled flag, a private/underscore-prefixed route or folder, a bare TODO with no ticket), look for corroborating evidence it's actually an oversight rather than a deliberate, still-current decision: a TODO/FIXME that explains why, a linked issue/PR, a commit message, or a changelog/doc reference. If you find it, cite it briefly. If you don't, do not draft a confident CREATE_ISSUE guessing at intent — set \`intent_confidence: "inferred"\` with a one-line \`intent_note\` naming what corroboration is missing. Only set \`intent_confidence: "evidenced"\` when you found and cited that corroboration.`;
+
+const INTENT_VS_CODE_SHAPE_FINDINGS = `Commented-out code, hardcoded disabled/false flags, and private/underscore-prefixed routes describe a state, not a decision — do not report one as a "bug" or "gap" on shape alone. Only call it a bug/gap when you also see corroborating evidence it's unintentional (a TODO/FIXME with context, a linked issue/PR, an inconsistency with docs or other live code). If you don't have that but still think it's worth a human look, say so plainly in \`notes\` (e.g. "magic-link verification is disabled — looks deliberate but no comment/ticket explains why") rather than in \`bugs\`/\`gaps\`.`;
+
 export const PLAN_JSON_INSTRUCTIONS = `You are TaskFlow in propose-only mode.
 Using the skill rules and the frozen GitHub evidence JSON, produce a versioned GITHUB CHANGE PLAN.
 
 ${DEPTH_OVER_COVERAGE}
+
+${INTENT_VS_CODE_SHAPE}
 
 When \`codebase.files\` is present, read the actual source — infer bugs, gaps, and features from code + issues together, applying the depth standard above. Reference real file paths from the codebase in UPDATE/CREATE operations (set has_files true when the plan cites concrete paths).
 
@@ -269,7 +275,9 @@ Return ONLY valid JSON (no markdown fences, no prose) matching this schema:
       "fits_two_weeks": true,
       "suggested_assignee": "roster-login",
       "assignee_confidence": "confident",
-      "assignee_reason": "short why"
+      "assignee_reason": "short why",
+      "intent_confidence": "evidenced",
+      "intent_note": "short why"
     }
   ]
 }
@@ -280,11 +288,14 @@ Rules:
 - Omit optional fields instead of using null.
 - For CREATE_ISSUE and UPDATE_ISSUE, set the has_* / no_open_decision / fits_two_weeks booleans to true only if your planned body would actually satisfy that Definition of Ready item (has_caveman, has_files, has_ac, has_outcome, has_scope, has_test_plan, has_dependencies, has_nfr_docs_rollout, no_open_decision, fits_two_weeks). These are your own self-assessment hints — they are not the final word on readiness.
 - suggested_assignee / assignee_confidence apply to CREATE_ISSUE only, and only per the roster rule above.
+- intent_confidence / intent_note apply to CREATE_ISSUE only, when proposing to restore/enable/fix code that looks intentionally disabled — see the guardrail above. Omit both otherwise.
 - Keep the plan MVP-sized. No GitHub writes will be executed — propose only.`;
 
 export const FINDINGS_JSON_INSTRUCTIONS = `You are TaskFlow analyzing source files for a propose-only GitHub plan.
 
 ${DEPTH_OVER_COVERAGE}
+
+${INTENT_VS_CODE_SHAPE_FINDINGS}
 
 Given the skill rules and a JSON payload of source files (and optional GitHub context), return ONLY valid JSON:
 
@@ -314,6 +325,8 @@ You receive:
 
 ${DEPTH_OVER_COVERAGE}
 
+${INTENT_VS_CODE_SHAPE}
+
 Not every finding deserves its own CREATE_ISSUE — apply the same depth standard here. A short list of well-reasoned issues beats one CREATE_ISSUE per finding.
 
 Produce a versioned GITHUB CHANGE PLAN. Prefer UPDATE / DEDUPLICATE / KEEP over redundant CREATE.
@@ -326,7 +339,7 @@ Return ONLY valid JSON matching:
   "plan_version": "v1",
   "mode": 1 | 2 | 3,
   "summary": "one sentence",
-  "operations": [ { "id": "OP-01", "type": "...", "title": "...", "reason": "...", "issue_number": 1, "has_caveman": true, "has_files": true, "has_ac": true, "has_outcome": true, "has_scope": true, "has_test_plan": true, "has_dependencies": true, "has_nfr_docs_rollout": true, "no_open_decision": true, "fits_two_weeks": true, "suggested_assignee": "roster-login", "assignee_confidence": "confident", "assignee_reason": "short why" } ]
+  "operations": [ { "id": "OP-01", "type": "...", "title": "...", "reason": "...", "issue_number": 1, "has_caveman": true, "has_files": true, "has_ac": true, "has_outcome": true, "has_scope": true, "has_test_plan": true, "has_dependencies": true, "has_nfr_docs_rollout": true, "no_open_decision": true, "fits_two_weeks": true, "suggested_assignee": "roster-login", "assignee_confidence": "confident", "assignee_reason": "short why", "intent_confidence": "evidenced", "intent_note": "short why" } ]
 }
 
 Omit optional fields instead of null. No GitHub writes — propose only. No markdown fences.`;
@@ -345,6 +358,8 @@ You receive one entry per repo:
 
 ${DEPTH_OVER_COVERAGE}
 
+${INTENT_VS_CODE_SHAPE}
+
 Produce ONE versioned GITHUB CHANGE PLAN covering all repos. Every operation MUST set \`"repo"\` to the exact repo string it targets (from the \`repo\` field of one of the input entries) — never omit it, never invent a repo not in the payload. Prefer UPDATE / DEDUPLICATE / KEEP over redundant CREATE, per repo's own issues.
 
 When \`github.roster\` is present for a repo, apply the same suggested_assignee rule as single-repo plans: only propose it for CREATE_ISSUE, only with assignee_confidence "confident" on an unambiguous skill-tag match, scoped to that repo's own roster.
@@ -354,7 +369,7 @@ Return ONLY valid JSON matching:
   "plan_version": "v1",
   "mode": 1 | 2 | 3,
   "summary": "one sentence",
-  "operations": [ { "id": "OP-01", "repo": "owner/name", "type": "...", "title": "...", "reason": "...", "issue_number": 1, "has_caveman": true, "has_files": true, "has_ac": true, "has_outcome": true, "has_scope": true, "has_test_plan": true, "has_dependencies": true, "has_nfr_docs_rollout": true, "no_open_decision": true, "fits_two_weeks": true, "suggested_assignee": "roster-login", "assignee_confidence": "confident", "assignee_reason": "short why" } ]
+  "operations": [ { "id": "OP-01", "repo": "owner/name", "type": "...", "title": "...", "reason": "...", "issue_number": 1, "has_caveman": true, "has_files": true, "has_ac": true, "has_outcome": true, "has_scope": true, "has_test_plan": true, "has_dependencies": true, "has_nfr_docs_rollout": true, "no_open_decision": true, "fits_two_weeks": true, "suggested_assignee": "roster-login", "assignee_confidence": "confident", "assignee_reason": "short why", "intent_confidence": "evidenced", "intent_note": "short why" } ]
 }
 
 Omit optional fields instead of null. No GitHub writes — propose only. No markdown fences.`;

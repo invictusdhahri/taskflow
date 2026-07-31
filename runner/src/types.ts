@@ -147,6 +147,9 @@ export interface PlanOperation {
   suggested_assignee?: string;
   assignee_confidence?: "confident" | "uncertain";
   assignee_reason?: string;
+  /** Only for CREATE_ISSUE proposing to restore/enable/fix code that looks intentionally disabled — "evidenced" only when a TODO/FIXME with context, linked issue/PR, or doc/changelog reference backs the claim; "inferred" (or omitted) means code shape alone, no corroboration. */
+  intent_confidence?: "evidenced" | "inferred";
+  intent_note?: string;
 }
 
 export interface BenchPlan {

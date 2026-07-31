@@ -204,3 +204,18 @@ User picks **Just me**. Agent confirms `@me` (or their login).
 Correct create plan: every new issue includes `assignee=@me` and VERIFY shows assignees populated.
 
 Incorrect: leaving issues Unassigned “for the board” when there is only one coder.
+
+## Example 10 — Disabled code is not automatically a bug
+
+Evidence:
+
+- `app/(auth)/_setup-password/` (Next.js private route) has magic-link and setup-password verification hardcoded to `false` and partially commented out
+- no TODO/FIXME near the code, no linked issue, no commit message explaining why, no changelog entry
+
+Incorrect: proposing a ready `CREATE_ISSUE "Restore magic-link and setup-password verification"` — code shape (disabled, private folder) is not proof the team wants it back.
+
+Correct response: hold it as `NEEDS CONFIRMATION` and add one targeted question to the batch:
+
+> This route's magic-link and setup-password verification look deliberately disabled (hardcoded `false`, partially commented out, no TODO/ticket/commit explaining why). Was this paused/deprecated on purpose, or is it genuinely unfinished and safe to propose restoring?
+
+Only after an answer — or evidence surfaces elsewhere (a linked issue, a commit message) — should a `CREATE_ISSUE` be drafted.

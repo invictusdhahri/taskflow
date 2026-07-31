@@ -24,13 +24,14 @@ Create an ordered, non-redundant task flow and the GitHub structure needed to ru
 2. **Ask tool permission once per TaskFlow run — not on every `gh` call.** At session start (before evidence gathering), ask a single Continue / Refuse chooser for GitHub CLI / git / shell access. After **Continue**, do not re-ask for the same class of read/inspect commands mid-run. Plan Continue / Refuse still gates mutations.
 3. **Unknown is not absent.** Authentication, authorization, SSO, network, rate-limit, and target-resolution failures must never be interpreted as proof that a repository or Project does not exist.
 4. **Evidence first, questions second.** Inspect the repository, tracking state, and code first. Ask unresolved questions in one batch.
-5. **One issue, one independently verifiable outcome.** Use checklist items for implementation steps that do not need separate ownership or delivery.
-6. **Reuse existing conventions.** Do not invent labels, milestones, Project fields, status options, or assignments without approval.
-7. **Open PRs are in-flight, not done.** Keep the canonical issue open until completion satisfies the Definition of Done. Do not create a redundant issue solely to mirror a PR.
-8. **Native relationships are mandatory when supported.** Body text like “Blocked by #12” is not enough. Set GitHub Relationships (`blocked by` / `blocks`, and parent/sub-issue when it is a true hierarchy). Verify the sidebar is non-empty after writes.
-9. **Project fields and labels are real writes.** If the plan states Size, Estimate, Priority, Status, or Labels, set them on the Project item and/or repository issue. Planning prose in the issue body does not populate the Project sidebar.
-10. **Stop safely on failure.** Record completed operation identities, emit a partial verification report, and create a residual plan. Never rerun the whole plan blindly.
-11. **Verify after writes.** Re-read GitHub state and report actual URLs, numbers, relationships, fields, labels, and mismatches.
+5. **Code shape is not proof of intent.** Commented-out code, hardcoded disable flags, private/underscore-prefixed routes, and bare TODOs describe a *state*, not a decision. Before proposing to restore/wire up/enable/fix such code, look for corroborating evidence (commit message, PR, linked issue, changelog, doc) explaining why. If none exists, do not draft a ready CREATE issue guessing at intent — add a targeted question to the batch and hold the item as `NEEDS CONFIRMATION` until answered.
+6. **One issue, one independently verifiable outcome.** Use checklist items for implementation steps that do not need separate ownership or delivery.
+7. **Reuse existing conventions.** Do not invent labels, milestones, Project fields, status options, or assignments without approval.
+8. **Open PRs are in-flight, not done.** Keep the canonical issue open until completion satisfies the Definition of Done. Do not create a redundant issue solely to mirror a PR.
+9. **Native relationships are mandatory when supported.** Body text like “Blocked by #12” is not enough. Set GitHub Relationships (`blocked by` / `blocks`, and parent/sub-issue when it is a true hierarchy). Verify the sidebar is non-empty after writes.
+10. **Project fields and labels are real writes.** If the plan states Size, Estimate, Priority, Status, or Labels, set them on the Project item and/or repository issue. Planning prose in the issue body does not populate the Project sidebar.
+11. **Stop safely on failure.** Record completed operation identities, emit a partial verification report, and create a residual plan. Never rerun the whole plan blindly.
+12. **Verify after writes.** Re-read GitHub state and report actual URLs, numbers, relationships, fields, labels, and mismatches.
 
 For command-level GitHub and Projects V2 handling, read [github-operations.md](github-operations.md) before any GitHub inspection or write.
 
@@ -96,8 +97,19 @@ Then collect:
 | If | Ask / do |
 |----|----------|
 | **1 coder** | Confirm their GitHub login (default `@me` / the authenticated `gh` user). **Assign every created/updated actionable issue to them** unless they explicitly refuse assignment. |
-| **2+ coders** | Ask for each person’s GitHub login + focus (frontend/backend/full-stack/etc.). Ask assignment mode: (1) assign by skill match (2) assign all to a lead (3) leave unassigned for board pickup. |
+| **2+ coders** | Ask **first**, before collecting anyone's login, how assignment should work (see below). Then act on the answer. |
 | **Not sure** | Default to **1 coder = current `gh` user** and say so; assign to `@me` unless they correct you. |
+
+For **2+ coders**, ask the assignment-mode chooser before any roster/skillset collection:
+
+> How should issues get assigned?
+> 1. **Automatic** — I'll collect each person's GitHub login + focus area, then assign by skill match
+> 2. **Manual** — leave every new/updated issue Unassigned; a manager/founder will assign by hand (or tell me one person, e.g. a lead, to receive everything instead of leaving items Unassigned — still Manual, no skill-matching runs)
+
+| Answer | Do |
+|--------|----|
+| **Automatic** | Ask for each person's GitHub login + focus (frontend/backend/full-stack/etc.). Assign each created/updated issue to the best skill match. |
+| **Manual** | Skip roster/skillset collection entirely. Leave all new/updated issues Unassigned (or all assigned to one stated lead login, if given). State that a manager/founder will assign by hand. |
 
 Rules:
 
@@ -168,6 +180,7 @@ Inspect as applicable:
 - Project issue, PR, draft, and relevant archived items
 - fields, status options, workflows, linked repositories, labels, milestones, and assignees
 - TODOs, stubs, failing tests, incomplete migrations, and code/tracking mismatches
+- Ambiguous-intent signals (rule 5) — inspect but do not treat as self-explanatory: commented-out blocks, hardcoded disabled/false flags, private/underscore-prefixed folders or routes, and TODOs with no ticket reference. Look for a commit message, PR, linked issue, changelog, or doc that explains *why* before assuming it's broken rather than deliberate.
 
 Paginate rather than silently relying on default limits. If the backlog is too large for a full audit, sample only after declaring the boundary and obtaining agreement.
 
@@ -187,8 +200,10 @@ Each task must:
 - state scope and out-of-scope
 - record applicable non-functional requirements
 - include dependencies, risks, documentation, and rollout implications when relevant
-- include a real **Assignee** (GitHub login or `@me`) — Unassigned only when the user chose board-pickup with 2+ coders
+- include a real **Assignee** (GitHub login or `@me`) — Unassigned only when the team chose Manual assignment (§1b) with 2+ coders
 - be independently verifiable and normally fit within two weeks
+
+If a proposed task's premise rests only on code shape with no corroborating tracked evidence (rule 5), do not present it as a ready `CREATE` in the task flow. Mark it `NEEDS CONFIRMATION`, add a targeted question to the batched clarifying-questions set (rule 4), and hold it out of the plan until answered.
 
 Use provisional IDs (`T1`, `T2`) before GitHub numbers exist. Produce:
 

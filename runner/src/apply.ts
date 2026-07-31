@@ -43,6 +43,7 @@ Options:
   --plan PATH           Required. Plan JSON produced by \`pnpm plan\`.
   --dry-run             Render + duplicate-check as normal; skip gh writes.
   --roster PATH         Local roster JSON override (skip live collaborator/roster fetch).
+  --no-auto-assign       Never auto-assign — every CREATE_ISSUE lands on Backlog unassigned (headless equivalent of the skill's Manual mode).
   --max-creates N        Cap issues created in one run (default 5).
   --project-owner OWNER  Project owner, when ambiguous or not the repo owner.
   --project-number N     Project number, when the repo has more than one.
@@ -249,6 +250,7 @@ interface OpResult {
   assignee?: string;
   dor?: DorResult;
   duplicate?: { checked: boolean; flagged: boolean; duplicate_of?: number; reasoning?: string };
+  intent?: { confidence?: "evidenced" | "inferred"; note?: string };
   note?: string;
 }
 
@@ -260,6 +262,7 @@ async function main(): Promise<void> {
   if (!planPath) usage();
 
   const dryRun = hasFlag(args, "--dry-run");
+  const noAutoAssign = hasFlag(args, "--no-auto-assign");
   const rosterArg = argValue(args, "--roster");
   const maxCreates = Number(argValue(args, "--max-creates") ?? 5);
   const projectOwnerArg = argValue(args, "--project-owner");
@@ -415,11 +418,14 @@ async function main(): Promise<void> {
       const dor = checkDefinitionOfReady(body);
       const dup = dupById.get(op.id);
       const duplicateClean = Boolean(dup?.checked && !dup.duplicate);
-      const assigneeOk = Boolean(
-        op.suggested_assignee &&
-          op.assignee_confidence === "confident" &&
-          ctx.collabSet.has(op.suggested_assignee),
-      );
+      const intentOk = op.intent_confidence !== "inferred";
+      const assigneeOk =
+        !noAutoAssign &&
+        Boolean(
+          op.suggested_assignee &&
+            op.assignee_confidence === "confident" &&
+            ctx.collabSet.has(op.suggested_assignee),
+        );
 
       let note: string | undefined;
       let ready = false;
@@ -430,12 +436,16 @@ async function main(): Promise<void> {
             : dup?.checked === false
               ? `duplicate check unresolved for this op (${dup.reasoning})`
               : "possible duplicate";
+      } else if (!intentOk) {
+        note = `inferred from code shape only (${op.intent_note ?? "no corroborating evidence found"}) — confirm this wasn't deliberately disabled/deprecated before promoting to Ready`;
       } else if (!dor.passed) {
         note = `Definition of Ready failed: ${dor.failed_items.join(", ")}`;
       } else if (!assigneeOk) {
-        note = op.suggested_assignee
-          ? `assignee suggestion "${op.suggested_assignee}" not confident or not a current collaborator`
-          : "no confident roster match for an assignee";
+        note = noAutoAssign
+          ? "auto-assign disabled (--no-auto-assign) — assign manually"
+          : op.suggested_assignee
+            ? `assignee suggestion "${op.suggested_assignee}" not confident or not a current collaborator`
+            : "no confident roster match for an assignee";
       } else {
         ready = true;
       }
@@ -447,6 +457,10 @@ async function main(): Promise<void> {
         reasoning: dup?.reasoning,
       };
 
+      const intentSummary = op.intent_confidence
+        ? { confidence: op.intent_confidence, note: op.intent_note }
+        : undefined;
+
       if (dryRun) {
         results.push({
           op_id: op.id,
@@ -457,6 +471,7 @@ async function main(): Promise<void> {
           assignee: ready ? op.suggested_assignee : undefined,
           dor,
           duplicate: duplicateSummary,
+          intent: intentSummary,
           note,
         });
         console.log(
@@ -483,6 +498,7 @@ async function main(): Promise<void> {
         assignee: ready ? op.suggested_assignee : undefined,
         dor,
         duplicate: duplicateSummary,
+        intent: intentSummary,
         note,
       });
       console.log(

@@ -50,6 +50,11 @@ function optionalConfidence(value: unknown): "confident" | "uncertain" | undefin
   return value === "confident" || value === "uncertain" ? value : undefined;
 }
 
+/** Unrecognized values become undefined rather than failing the whole plan — this is a soft hint field. */
+function optionalIntentConfidence(value: unknown): "evidenced" | "inferred" | undefined {
+  return value === "evidenced" || value === "inferred" ? value : undefined;
+}
+
 const OpSchema = z.object({
   id: z.string(),
   type: z.enum(OP_TYPES),
@@ -75,6 +80,11 @@ const OpSchema = z.object({
     z.enum(["confident", "uncertain"]).optional(),
   ),
   assignee_reason: z.preprocess(optionalString, z.string().optional()),
+  intent_confidence: z.preprocess(
+    optionalIntentConfidence,
+    z.enum(["evidenced", "inferred"]).optional(),
+  ),
+  intent_note: z.preprocess(optionalString, z.string().optional()),
 });
 
 const PlanSchema = z.object({

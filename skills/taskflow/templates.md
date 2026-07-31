@@ -116,7 +116,7 @@ Move an issue to `Ready` only when all boxes pass:
 - [ ] **NFR / docs / rollout** are filled or `N/A — reason`
 - [ ] No open product/architecture decision blocks coding
 - [ ] Size fits in ~2 weeks, or the issue is split
-- [ ] Assignee is a real GitHub login (or `@me`); Unassigned only if user chose board-pickup with 2+ coders
+- [ ] Assignee is a real GitHub login (or `@me`); Unassigned only if the team chose **Manual** assignment (§1b) with 2+ coders
 
 If Ready fails → keep in Backlog and `UPDATE`, split, or open a discovery issue.
 
@@ -252,7 +252,7 @@ Use for features, integrations, migrations, and most bugs with non-trivial verif
 - Priority: Critical / High / Medium / Low — because ...
 - Size: S (1–2d) / M (3–5d) / L (1–2w)
 - Estimate (proposal): ...
-- Assignee: @login or `@me` (required when 1 coder; Unassigned only if user chose board-pickup)
+- Assignee: @login or `@me` (required when 1 coder or **Automatic** assignment; Unassigned only under **Manual** assignment)
 - Labels: ...
 - Milestone: ...
 - Related: #… · PR #… · docs…
@@ -309,7 +309,7 @@ Use when the change is small, risk is low, and Ready still holds.
 ## Planning
 - Priority: ... — because ...
 - Size: S
-- Assignee: @login or `@me` (required when 1 coder; Unassigned only if user chose board-pickup)
+- Assignee: @login or `@me` (required when 1 coder or **Automatic** assignment; Unassigned only under **Manual** assignment)
 - Related: ...
 ```
 
@@ -543,7 +543,7 @@ Target
 - Mode: 1 | 2 | 3
 - Project: OWNER/#N | CREATE under OWNER | none
 - Coding team: N coder(s) — logins: @me | user1, user2
-- Assignment mode: assign-all-to-solo | by-skill | lead | board-pickup
+- Assignment mode: solo (1 coder) | automatic (skill match) | manual (unassigned, or all to one stated lead)
 - Audit boundary:
 - Evidence: complete | sampled — exclusions: ...
 
