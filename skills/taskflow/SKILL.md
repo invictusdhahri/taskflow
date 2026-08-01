@@ -3,7 +3,7 @@ name: taskflow
 description: Generates and maintains GitHub-backed task flows. Use when the user wants to bootstrap a repository and GitHub Project, create a Project and issues for an existing repository, audit an existing Project or backlog, deduplicate issues, or turn project requirements into implementation-ready GitHub work.
 license: MIT
 metadata:
-  version: "3.4.0"
+  version: "3.5.0"
 allowed-tools:
   - Read
   - Grep
@@ -183,6 +183,29 @@ Inspect as applicable:
 - Ambiguous-intent signals (rule 5) — inspect but do not treat as self-explanatory: commented-out blocks, hardcoded disabled/false flags, private/underscore-prefixed folders or routes, and TODOs with no ticket reference. Look for a commit message, PR, linked issue, changelog, or doc that explains *why* before assuming it's broken rather than deliberate.
 
 Paginate rather than silently relying on default limits. If the backlog is too large for a full audit, sample only after declaring the boundary and obtaining agreement.
+
+### 3a. Parallel evidence gathering (when the host supports subagent dispatch)
+
+Split evidence gathering into independent, bounded missions instead of one long sequential pass:
+
+1. **GitHub tracking-state mission** — issues/PRs/Project items/labels/milestones/relationships for the resolved `OWNER/REPO`, per the Evidence completeness section of [github-operations.md](github-operations.md).
+2. **Codebase mission** — TODOs/stubs/failing tests/manifests/code-tracking mismatches, and rule 5's ambiguous-intent signals.
+3. **Related-repository mission(s)** — one per repo confirmed in §3b, each answering a narrow stated question.
+
+Rules:
+
+- Dispatch missions that have no dependency on each other together, not one at a time.
+- Each mission returns a **compact structured summary** (counts and flagged items), not raw command/grep output. The orchestrating turn merges summaries; it does not re-read everything a mission saw.
+- If the host has no subagent-dispatch tool, run the same three bounded missions sequentially in the current turn instead — the structure (bounded scope, structured summary) still applies without the parallelism.
+- Subagent dispatch is evidence-only. Mode detection (§2), task generation (§4), reconciliation (§5), and every write in §8 stay in the orchestrating turn — they need a single holistic view and a single operation ledger.
+
+### 3b. Related-repository discovery (confirm before scanning)
+
+After the target repo is resolved (§1), identify related-repo *candidates*: other git remotes/submodules, workspace siblings with README/naming cross-links, or repos the user names.
+
+- Never scan a candidate without confirmation. Ask one batched question listing the candidates (chooser or numbered list) as part of the existing "ask unresolved questions in one batch" step (rule 4) — do not add a second round-trip.
+- Dispatch a mission only for confirmed repos, each with a narrow question, for example: "does this repo reference OWNER/REPO's issues, share Project conventions, or contain code this backlog depends on?"
+- Findings fold into the evidence summary with explicit repo attribution. Writes stay scoped to the originally resolved `OWNER/REPO` unless the user separately approves expanding scope.
 
 Summarize evidence in 5–10 lines before proposing work.
 

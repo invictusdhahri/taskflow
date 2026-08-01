@@ -219,3 +219,19 @@ Correct response: hold it as `NEEDS CONFIRMATION` and add one targeted question 
 > This route's magic-link and setup-password verification look deliberately disabled (hardcoded `false`, partially commented out, no TODO/ticket/commit explaining why). Was this paused/deprecated on purpose, or is it genuinely unfinished and safe to propose restoring?
 
 Only after an answer — or evidence surfaces elsewhere (a linked issue, a commit message) — should a `CREATE_ISSUE` be drafted.
+
+## Example 11 — Related-repo candidate needs confirmation before scanning
+
+Evidence while resolving the target (`acme/payments-api`):
+
+- `acme/payments-web` shares the `acme` org, and `payments-api`'s README links to it as "the client for this API"
+- `acme/marketing-site` also shares the `acme` org, but nothing in either repo cross-links the other, and it has no code dependency on `payments-api`
+
+Correct response: batch one confirmation question before scanning anything (rule 4), rather than silently reading either repo:
+
+> While resolving `acme/payments-api` I found `acme/payments-web`, which this repo's README links to as its client. I also see `acme/marketing-site` in the same org, but nothing connects it to this backlog.
+> Should I also pull context from `acme/payments-web` for this audit? (`acme/marketing-site` will stay out of scope unless you say otherwise.)
+
+User confirms `payments-web` only. TaskFlow dispatches one related-repository mission for `payments-web` with a narrow question ("does this repo reference `payments-api`'s issues, share Project conventions, or depend on code this backlog would change?"), folds the structured summary into the evidence with `payments-web` attribution, and leaves `marketing-site` unscanned.
+
+Incorrect: scanning `payments-web` or `marketing-site` without asking, or expanding the `GITHUB CHANGE PLAN`'s write scope to `payments-web` without a separate approval.

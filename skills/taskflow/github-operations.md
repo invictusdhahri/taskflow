@@ -74,6 +74,8 @@ gh label list --repo OWNER/REPO --limit 1000
 
 Define a recent-history window appropriate to the project. If the inventory exceeds practical analysis size, state the selection rule (for example, active milestone + updated in 90 days) and what was excluded.
 
+When evidence gathering is split across parallel missions (SKILL.md §3a), the GitHub tracking-state mission still follows the pagination/limit rules in this section on its own — splitting the work does not relax them.
+
 GitHub CLI has no general `gh milestone list` command. Enumerate milestones through the API:
 
 ```bash

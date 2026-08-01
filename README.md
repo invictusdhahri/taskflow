@@ -23,6 +23,7 @@ TaskFlow helps an AI coding agent:
 - stand up a Project for an existing repository
 - audit, deduplicate, and clean an existing Project/backlog
 - produce implementation-ready issues with Caveman summaries, file lists, acceptance criteria, native Relationships, and safe write plans
+- parallelize evidence gathering across independent GitHub/codebase/related-repo subagents when the host supports it, with a confirmation gate before any related repo is scanned
 
 It follows the open [Agent Skills](https://agentskills.io) standard and works with Cursor, Claude Code, Codex, and other compatible agents.
 
