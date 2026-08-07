@@ -36,6 +36,15 @@ Do not infer absence from a nonzero exit alone. Classify failure:
 
 If the repository is archived, Issues are disabled, or permission is insufficient, produce a blocker or separate remediation operation in the change plan.
 
+**Multiple logged-in accounts:** `gh auth status` can list more than one account. Do not assume the account marked `Active: true` has sufficient access — a target repo/org can 404 for the active account while a second logged-in account has real access (or vice versa). Test the actual target against each listed account before concluding access is `UNKNOWN` or `ABSENT`:
+
+```bash
+gh auth status  # lists every logged-in account
+GH_TOKEN=$(gh auth token --user OTHER_ACCOUNT) gh api repos/OWNER/REPO
+```
+
+If a second account turns out to hold the needed access, say so explicitly and confirm with the user before using it for writes — don't silently swap accounts without flagging it.
+
 ## Permission and capability preflight
 
 Before presenting an executable plan, establish:
@@ -124,6 +133,18 @@ Also inspect Project membership on representative issues/PRs when a Project may 
 
 If multiple Projects apply, ask the user to select. Do not create a duplicate Project.
 
+### Hard constraint: personal Project + organization repository
+
+A **user-owned** Project can never be linked to an **organization-owned** repository. This is a GitHub platform rule, not a permissions gap — confirmed by both `gh project link` and the `linkProjectV2ToRepository` GraphQL mutation, which returns:
+
+> Only projects owned by the same owner as the repository can be linked.
+
+Ask about this **before** creating the Project, not after a failed link attempt. If the user wants a personal Project to track work living in an org repo:
+
+- issues can still be added individually (`gh project item-add --url ...`) and everything else (fields, relationships, views) works normally
+- repo-linking and any auto-add-new-issues workflow will never work for that owner combination, full stop — no scope or permission fixes this
+- offer the choice explicitly: keep the personal Project (manual `item-add` for every new issue, going forward) or use an org-owned Project instead (native linking works, but needs org Project-creation rights)
+
 ## Projects V2 model
 
 Use Projects V2 terminology:
@@ -196,6 +217,8 @@ Optional extras (only if the user approved them):
 -f name='Table' -f layout='table'
 -f name='Roadmap' -f layout='roadmap'
 ```
+
+**This endpoint has been observed to return `404` in practice** for at least some user-owned Project/token combinations, even with correct syntax, scopes, and a valid project number. Don't spend more than one attempt on it — if it 404s, go straight to the manual fallback (open the Project → New view → Board → group by Status) and report the limitation in VERIFY, rather than retrying variations of the call.
 
 After create, open the Project URL and confirm the Board is present and Status columns appear. If the API creates the Board but grouping is wrong, report that limitation and provide the UI step: set the Board to group by **Status**.
 
@@ -306,6 +329,13 @@ Rules:
 - reject dependency cycles before writing
 - after writes, verify with `gh issue view N --json blockedBy,blocking,parent,subIssues` and confirm the issue sidebar is not “None yet”
 
+**Same-repo vs cross-repo argument format differs and is easy to get wrong on the first try:**
+
+- Same repo as the dependent issue: a **plain issue number** — `--add-blocked-by 5`. The `OWNER/REPO#5` shorthand *looks* like it should work but fails with `invalid issue format` for a same-repo reference.
+- Different repo: the **full issue URL** — `--add-blocked-by https://github.com/OWNER/REPO/issues/5`.
+
+Check whether the blocker lives in the same repo as the dependent issue before picking the argument format, rather than discovering the failure by trial and error.
+
 Every `GITHUB CHANGE PLAN` that mentions dependencies must include explicit relationship operations (for example `OP-XX RELATE #25 blocked-by #21,#24`). Updating body markdown alone is incomplete.
 
 If native relationships are unavailable on the host/CLI, record relationships in issue bodies **and** report that limitation in VERIFY.
@@ -378,10 +408,25 @@ After approval:
 7. create approved repository-scoped labels/milestones
 8. create parent/foundation/blocker issues in topological order
 9. create native relationships and replace provisional IDs
-10. add issues to Project and capture item IDs
+10. add issues to Project and capture item IDs — then immediately re-query independently (see "Verify writes immediately" below) before proceeding; do not trust `item-add`'s own output as proof of persistence
 11. set Project fields in separate operations
 12. perform approved issue updates, duplicate closures, and other state changes
 13. verify every operation — including that a Board view exists — and report mismatches
+
+## Verify writes immediately, not only at the end
+
+`gh project item-add` / `item-edit` can return what looks like a valid success payload — a real-looking item ID, no error — for a write that did not actually persist. This has been observed in practice: three items appeared successfully added and fielded from their own command output, but an independent query run later showed they were never actually part of the Project.
+
+Do not trust a batch of Project writes based on their own command output alone. After every batch of `item-add`/`item-edit` calls — not just at the final VERIFY step — re-query independently, for example:
+
+```bash
+gh api graphql -f query='
+query { node(id: "PROJECT_ID") { ... on ProjectV2 {
+  items(first: 100) { totalCount nodes { id content { ... on Issue { number repository { name } } } } }
+} } }'
+```
+
+Confirm the expected count and membership before moving on to operations that depend on the item existing (setting its fields, creating relationships that reference it, reporting it as done). Catching a silent failure immediately costs one extra query; catching it at the end of a long session costs a full re-diagnosis and a correction round-trip with the user.
 
 ## Operation ledger and recovery
 
