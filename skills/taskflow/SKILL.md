@@ -3,7 +3,7 @@ name: taskflow
 description: Generates and maintains GitHub-backed task flows. Use when the user wants to bootstrap a repository and GitHub Project, create a Project and issues for an existing repository, audit an existing Project or backlog, deduplicate issues, or turn project requirements into implementation-ready GitHub work.
 license: MIT
 metadata:
-  version: "3.5.0"
+  version: "3.6.0"
 allowed-tools:
   - Read
   - Grep
@@ -76,9 +76,10 @@ Before an executable plan, check:
 - repository owner, visibility, default branch, fork/parent, archived state, Issues enabled, and viewer permission
 - Project owner, access, visibility, linked repositories, fields, workflows, and applicable views
 - for new Projects: Board view is in the plan by default; ask whether Table/Roadmap are also wanted
-- **coding team roster** (required — see §1b)
+- **coding team roster** (required — see §1b) **and planning context** (required — see §1c)
 - whether proposed assignees are assignable on the target repo
 - whether the evidence set is complete or sampled
+- **every** authenticated `gh` account, not just the one marked `Active`. `gh auth status` can list several logged-in accounts; the active one may have no access at all to the target while a second account does. Test the actual target repo/org against each listed account before concluding access is `UNKNOWN` or `ABSENT` — do not stop at the first 404.
 
 ## 1b. Coding team roster (required)
 
@@ -117,6 +118,56 @@ Rules:
 - “Suggested assignee” in the issue body is not enough — use `gh issue edit N --add-assignee LOGIN` (or `@me`) on create/update.
 - Verify assignability before the plan; if someone cannot be assigned, say why and ask for an alternate login.
 - Non-coding stakeholders (PM, design-only) are optional; do not count them as coders unless they will open PRs.
+
+## 1c. Planning context (ask alongside the roster, same batch)
+
+Ask these together with the §1b roster questions, before drafting Plan v1 —
+not as follow-ups after the user notices a gap in an already-approved plan.
+Learning these late is what forces repeated re-plans over the same ground.
+
+**Deadline / timeline.** Ask directly:
+
+> Is there a deadline or target date for this work?
+
+A deadline changes task sizing and ordering, not just scheduling. It decides
+whether the first wave should split a large foundational task into smaller,
+faster-landing pieces (so a second coder has something to pick up sooner) or
+can stay as fewer, larger issues. Convert any relative date the user gives
+("next Friday", "in two weeks") to an absolute date before using it, and set
+it as the relevant GitHub Milestone's due date once one exists.
+
+**Parallelization, whenever there are 2+ coders.** Do not wait for the user
+to notice one person is idle partway through. Ask directly:
+
+> With N coders, should the first wave guarantee at least one dependency-free
+> item so both people can start on day one, or is sequential work fine?
+
+If a deadline exists, default to assuming the answer is yes: make sure Plan
+v1's first wave contains at least one zero-dependency item per coder —
+splitting a monolithic foundation task if that's what it takes — rather than
+proposing the split reactively after the user raises "we don't want to block
+each other."
+
+**Cross-cutting concerns checklist.** Ask once, as part of the same batch,
+whether any of these should get tracked issues in this pass. Do not wait for
+the user to bring each one up individually across several turns:
+
+- Security / rate-limiting / abuse hardening on public or write endpoints
+- CI / automated testing (lint, typecheck, unit, e2e) — check whether it
+  already exists (`.github/workflows/`, deploy pipelines) before assuming
+  it's missing, and check whether docs (README) describe CI that doesn't
+  actually exist yet — that mismatch is itself worth flagging
+- Design system / branding assets (colors, logo, typography) if the project
+  has a frontend and no established visual identity yet
+- Infrastructure/hosting decisions (database provider, hosting platform,
+  deployment target) — these can arrive mid-session as a casual aside ("we're
+  using X for the database") well after evidence-gathering; when they do,
+  treat it as reason to re-open and rescope any already-drafted schema/infra
+  task rather than filing it as unrelated new information
+
+Skip any category the user says isn't relevant yet. Do not manufacture
+issues for a category with no evidence and no expressed interest — ask,
+then act on the answer, the same way the roster question works.
 
 ## 2. Detect the mode
 
@@ -212,6 +263,8 @@ Summarize evidence in 5–10 lines before proposing work.
 ## 4. Generate the ordered task flow
 
 Default to the next shippable slice or current milestone. For a roadmap, separate `Now`, `Next`, and `Later`; do not create every speculative item unless requested.
+
+When issues are organized into Now/Next/Later waves, create matching GitHub Milestones for the waves being tracked (or explicitly note why not, e.g. only one wave is in scope right now) — forward-looking issues should have a stated home rather than being left milestone-less by default.
 
 Each task must:
 

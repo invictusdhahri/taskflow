@@ -99,6 +99,7 @@ Or a flat checkbox with the same information packed into one line.
 - **Scope** = what this issue delivers
 - **Out of scope** = adjacent work someone might assume is included
 - If out-of-scope work is needed, link a follow-up issue instead of stuffing it in
+- For a CRUD-shaped feature, bundling the endpoints with their business rules/validation in one issue is normally correct (an endpoint without its uniqueness/bounds/conflict rules isn't independently shippable — see rule 6). Make the split visible instead of implicit: label sub-bullets in Scope as e.g. "Endpoints:" and "Rules:" so a reader can see both are covered without having to ask.
 
 ---
 
