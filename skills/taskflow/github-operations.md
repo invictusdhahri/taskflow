@@ -412,6 +412,7 @@ After approval:
 11. set Project fields in separate operations
 12. perform approved issue updates, duplicate closures, and other state changes
 13. verify every operation — including that a Board view exists — and report mismatches
+14. write/refresh `.taskflow/project.json` in every repo this plan touched (see "Persisting TaskFlow context" below) — the last write before final VERIFY, so the next session (this user's or a teammate's, in any environment) can rehydrate context instead of re-deriving it
 
 ## Verify writes immediately, not only at the end
 
@@ -427,6 +428,67 @@ query { node(id: "PROJECT_ID") { ... on ProjectV2 {
 ```
 
 Confirm the expected count and membership before moving on to operations that depend on the item existing (setting its fields, creating relationships that reference it, reporting it as done). Catching a silent failure immediately costs one extra query; catching it at the end of a long session costs a full re-diagnosis and a correction round-trip with the user.
+
+## Persisting TaskFlow context (`.taskflow/project.json`)
+
+A separate, non-interactive package in this same source repo (`runner/`, a benchmarking harness — not what a user chats with) already established a convention worth reusing here: `.taskflow/roster.json` (login → skill tags) and `.taskflow/surface.json` (public-interface globs), both committed in the *target* repo and read via the Contents API. `.taskflow/project.json` extends that same convention to answer the question a fresh chat session cannot otherwise answer on its own: what Project, what repos, what roster, what deadline.
+
+**Schema:**
+
+```json
+{
+  "schemaVersion": 1,
+  "project": {
+    "host": "github.com",
+    "owner": "astathedev",
+    "ownerType": "user",
+    "number": 2,
+    "url": "https://github.com/users/astathedev/projects/2",
+    "canLinkRepos": false,
+    "note": "personal Project cannot link org-owned repos (platform rule); issues added individually via item-add"
+  },
+  "repos": ["OWNER/RepoA", "OWNER/RepoB"],
+  "milestones": { "Wave name": { "number": 1, "dueOn": "2026-08-14" } },
+  "roster": { "coderCount": "2+", "assignmentMode": "manual", "leadLogin": null, "rosterFileExists": false },
+  "deadline": "2026-08-14",
+  "lastPlan": { "version": 8, "executedAt": "2026-08-07T12:00:00Z" },
+  "updatedAt": "2026-08-07T12:00:00Z"
+}
+```
+
+- `schemaVersion`, not `version` — avoids clashing with `lastPlan.version` (a Plan v-number) in the same small file.
+- `roster` here is a **thin summary only** (`coderCount`/`assignmentMode`/`leadLogin` + a `rosterFileExists` pointer). It does **not** duplicate `.taskflow/roster.json`'s login→skill-tags data — that stays the single source of truth for Automatic-mode matching, read live when needed (see §1a in SKILL.md). Writing skill tags into both files invites drift the moment one is edited and not the other.
+- **Store each milestone's `number`, not just its title.** Confirmed by testing against real repos: milestone titles can contain non-ASCII punctuation (an em dash `—`, not a hyphen `-`, in one real case) that breaks a naive exact-string comparison silently — the lookup returns empty instead of erroring, which is worse than a crash because nothing signals the mismatch. Spot-check by number (`gh api repos/OWNER/REPO/milestones/<number>`, a direct, unambiguous GET) — never by matching on the title string.
+- For a product spanning multiple repos sharing one Project, write the *same* content to *every* repo the plan touches, so opening TaskFlow against any one of them reveals the shared Project and its siblings.
+
+**Read** (mirrors `roster.json`/`surface.json` exactly):
+
+```bash
+gh api repos/OWNER/REPO/contents/.taskflow/project.json --jq '.content' 2>/dev/null | base64 -d
+```
+
+Missing file → no prior context, never an error. See SKILL.md §1a for how a found file is spot-checked and confirmed with the user before being trusted.
+
+**Write** (sha-checked, so a stale concurrent write fails loudly instead of clobbering):
+
+```bash
+SHA=$(gh api repos/OWNER/REPO/contents/.taskflow/project.json --jq '.sha' 2>/dev/null)
+CONTENT_B64=$(base64 < project.json | tr -d '\n')
+
+if [ -n "$SHA" ]; then
+  gh api repos/OWNER/REPO/contents/.taskflow/project.json --method PUT \
+    -f message="chore(taskflow): update project context" \
+    -f content="$CONTENT_B64" -f sha="$SHA"
+else
+  gh api repos/OWNER/REPO/contents/.taskflow/project.json --method PUT \
+    -f message="chore(taskflow): add project context" \
+    -f content="$CONTENT_B64"
+fi
+```
+
+- **Conflict** (`409`/`422` on the `sha`): re-fetch the current `sha` and retry once. Don't loop silently — if it recurs, surface it in VERIFY.
+- **Branch protection** rejects the direct commit to the default branch: fall back to creating a branch, PUT to that branch (the Contents API takes a `branch` parameter), and open a PR with the same content. Note the fallback in VERIFY rather than treating it as a hard failure.
+- This write is one more `OP-XX WRITE_PROJECT_CONTEXT` line in the already-approved change plan (see templates.md) — it does not need its own separate approval round-trip, the same way label/milestone writes already work.
 
 ## Operation ledger and recovery
 
@@ -463,3 +525,4 @@ Verify actual state, not only command success:
 - duplicate relationship and canonical pointer
 - expected count versus actual count
 - no accidental duplicate resource
+- `.taskflow/project.json` reflects the plan's final repos/Project/roster/deadline in every touched repo, or an explicit reason it wasn't written (branch protection fallback used, or nothing worth persisting yet)
