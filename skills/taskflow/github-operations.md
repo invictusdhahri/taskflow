@@ -448,7 +448,7 @@ A separate, non-interactive package in this same source repo (`runner/`, a bench
     "note": "personal Project cannot link org-owned repos (platform rule); issues added individually via item-add"
   },
   "repos": ["OWNER/RepoA", "OWNER/RepoB"],
-  "milestones": { "Wave name": { "dueOn": "2026-08-14" } },
+  "milestones": { "Wave name": { "number": 1, "dueOn": "2026-08-14" } },
   "roster": { "coderCount": "2+", "assignmentMode": "manual", "leadLogin": null, "rosterFileExists": false },
   "deadline": "2026-08-14",
   "lastPlan": { "version": 8, "executedAt": "2026-08-07T12:00:00Z" },
@@ -458,6 +458,7 @@ A separate, non-interactive package in this same source repo (`runner/`, a bench
 
 - `schemaVersion`, not `version` — avoids clashing with `lastPlan.version` (a Plan v-number) in the same small file.
 - `roster` here is a **thin summary only** (`coderCount`/`assignmentMode`/`leadLogin` + a `rosterFileExists` pointer). It does **not** duplicate `.taskflow/roster.json`'s login→skill-tags data — that stays the single source of truth for Automatic-mode matching, read live when needed (see §1a in SKILL.md). Writing skill tags into both files invites drift the moment one is edited and not the other.
+- **Store each milestone's `number`, not just its title.** Confirmed by testing against real repos: milestone titles can contain non-ASCII punctuation (an em dash `—`, not a hyphen `-`, in one real case) that breaks a naive exact-string comparison silently — the lookup returns empty instead of erroring, which is worse than a crash because nothing signals the mismatch. Spot-check by number (`gh api repos/OWNER/REPO/milestones/<number>`, a direct, unambiguous GET) — never by matching on the title string.
 - For a product spanning multiple repos sharing one Project, write the *same* content to *every* repo the plan touches, so opening TaskFlow against any one of them reveals the shared Project and its siblings.
 
 **Read** (mirrors `roster.json`/`surface.json` exactly):

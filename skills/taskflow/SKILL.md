@@ -95,7 +95,7 @@ gh api repos/OWNER/REPO/contents/.taskflow/project.json --jq '.content' 2>/dev/n
 **Found → treat it as a claim as of its `updatedAt` timestamp, not ground truth.** Spot-check before trusting:
 
 - `gh project view NUMBER --owner OWNER --format json` — confirms the Project still exists
-- if `milestones` is populated, `gh api repos/OWNER/REPO/milestones/N` — confirms the milestone still exists
+- if `milestones` is populated, `gh api repos/OWNER/REPO/milestones/N` (the stored milestone **number**, never a title-string match — titles can contain non-ASCII punctuation that breaks exact comparison silently) — confirms the milestone still exists
 
 A 404 here means the persisted context is **stale/invalidated**, which is a different, more important thing to say out loud than "no context" — tell the user explicitly ("this repo's TaskFlow context pointed at Project #N, which no longer resolves") rather than silently falling back, then proceed as if no file existed.
 
