@@ -3,7 +3,7 @@ name: taskflow
 description: Generates and maintains GitHub-backed task flows. Use when the user wants to bootstrap a repository and GitHub Project, create a Project and issues for an existing repository, audit an existing Project or backlog, deduplicate issues, or turn project requirements into implementation-ready GitHub work.
 license: MIT
 metadata:
-  version: "3.6.0"
+  version: "3.7.0"
 allowed-tools:
   - Read
   - Grep
@@ -76,10 +76,37 @@ Before an executable plan, check:
 - repository owner, visibility, default branch, fork/parent, archived state, Issues enabled, and viewer permission
 - Project owner, access, visibility, linked repositories, fields, workflows, and applicable views
 - for new Projects: Board view is in the plan by default; ask whether Table/Roadmap are also wanted
+- **existing persisted context** (see §1a) — check before assuming a fresh start
 - **coding team roster** (required — see §1b) **and planning context** (required — see §1c)
 - whether proposed assignees are assignable on the target repo
 - whether the evidence set is complete or sampled
 - **every** authenticated `gh` account, not just the one marked `Active`. `gh auth status` can list several logged-in accounts; the active one may have no access at all to the target while a second account does. Test the actual target repo/org against each listed account before concluding access is `UNKNOWN` or `ABSENT` — do not stop at the first 404.
+
+## 1a. Check for existing TaskFlow context
+
+Before evidence-gathering (§3), check whether the resolved repo already carries persisted TaskFlow context from a prior run — this is what lets a brand-new chat session (this user's, or a teammate's, in any environment) pick up where an earlier one left off, instead of re-deriving the Project link, roster, or deadline from scratch.
+
+```bash
+gh api repos/OWNER/REPO/contents/.taskflow/project.json --jq '.content' 2>/dev/null | base64 -d
+```
+
+**Missing file → no prior context.** Proceed to §1b/§1c as normal fresh questions. This is expected and normal on a repo's first TaskFlow run — never treat it as an error.
+
+**Found → treat it as a claim as of its `updatedAt` timestamp, not ground truth.** Spot-check before trusting:
+
+- `gh project view NUMBER --owner OWNER --format json` — confirms the Project still exists
+- if `milestones` is populated, `gh api repos/OWNER/REPO/milestones/N` — confirms the milestone still exists
+
+A 404 here means the persisted context is **stale/invalidated**, which is a different, more important thing to say out loud than "no context" — tell the user explicitly ("this repo's TaskFlow context pointed at Project #N, which no longer resolves") rather than silently falling back, then proceed as if no file existed.
+
+If the Project and any referenced milestones resolve, surface a single confirmation line instead of re-asking everything or silently trusting everything:
+
+> Found existing TaskFlow context: Project `OWNER/#N` (`<url>`), deadline `<date>`, roster: `<coderCount> coders, <assignmentMode>`, linked repos: `<list>`. Still accurate?
+
+- **Yes / mostly** → feed these values into §1b/§1c as pre-filled confirmations, not fresh questions; only ask about what changed.
+- **No / things changed** → fall through to §1b/§1c as normal; the refreshed answers overwrite the file on the next write-back (see [github-operations.md](github-operations.md)).
+
+If `.taskflow/roster.json` also exists (a separate, pre-existing convention — login → skill tags for auto-assignment), read it when the roster's assignment mode is **Automatic**, instead of re-collecting skill tags from the user by hand.
 
 ## 1b. Coding team roster (required)
 
